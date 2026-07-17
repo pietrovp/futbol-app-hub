@@ -50,7 +50,7 @@ export default async function DetallePartido({ params }) {
     if (idsUsuarios.length > 0) {
       const { data } = await supabase
         .from("perfiles")
-        .select("id, nombre, posicion, avatar_url, estadisticas_jugador(media_general, nivel)")
+        .select("id, nombre, posicion, avatar_url, nivel")
         .in("id", idsUsuarios);
 
       perfilesData = data || [];
@@ -58,16 +58,13 @@ export default async function DetallePartido({ params }) {
 
     inscritos = (inscripcionesData || []).map((i) => {
       const perfil = perfilesData.find((p) => p.id === i.usuario_id);
-      const stats = Array.isArray(perfil?.estadisticas_jugador)
-        ? perfil.estadisticas_jugador[0]
-        : perfil?.estadisticas_jugador;
 
       return {
         id: i.id,
         nombre: perfil?.nombre || "Jugador",
         posicion: perfil?.posicion || "MED",
-        media: stats?.media_general || 65,
-        nivel: stats?.nivel || 1,
+        media: 65,
+        nivel: perfil?.nivel || 1,
         avatarUrl: perfil?.avatar_url || null,
       };
     });
