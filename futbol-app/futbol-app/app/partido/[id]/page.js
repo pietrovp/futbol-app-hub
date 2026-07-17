@@ -50,7 +50,7 @@ export default async function DetallePartido({ params }) {
     if (idsUsuarios.length > 0) {
       const { data } = await supabase
         .from("perfiles")
-        .select("id, nombre, posicion, nivel")
+        .select("id, nombre, posicion, nivel, media_general")
         .in("id", idsUsuarios);
 
       perfilesData = data || [];
@@ -63,7 +63,7 @@ export default async function DetallePartido({ params }) {
         id: i.id,
         nombre: perfil?.nombre || "Jugador",
         posicion: perfil?.posicion || "MED",
-        media: 65,
+        media: perfil?.media_general || 65,
         nivel: perfil?.nivel || 1,
         avatarUrl: null,
       };
