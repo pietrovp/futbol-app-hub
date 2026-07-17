@@ -14,10 +14,11 @@ export default function Jugadores() {
   useEffect(() => {
     async function cargar() {
       if (!supabase) { setCargando(false); return; }
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("perfiles")
-        .select("id, nombre, posicion, avatar_url, estadisticas_jugador(media_general, nivel, partidos_jugados, goles_total, asistencias_total)")
+        .select("id, nombre, posicion, nivel, media_general")
         .order("nombre");
+      if (error) console.error("ERROR JUGADORES:", error);
       setJugadores(data || []);
       setCargando(false);
     }
@@ -34,13 +35,11 @@ export default function Jugadores() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-800">Jugadores</h1>
         <p className="text-gray-500 text-sm">Descubre y conoce a los jugadores de la comunidad</p>
       </div>
 
-      {/* Filtros */}
       <div className="flex flex-col sm:flex-row gap-3">
         <input
           type="text"
@@ -66,7 +65,6 @@ export default function Jugadores() {
         </div>
       </div>
 
-      {/* Grid de jugadores */}
       {cargando ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin text-4xl">⚽</div>
@@ -77,22 +75,19 @@ export default function Jugadores() {
           <p>No se encontraron jugadores.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {filtrados.map((j) => {
-            const st = j.estadisticas_jugador?.[0];
-            return (
-              <Link key={j.id} href={`/jugadores/${j.id}`} className="hover:scale-105 transition-transform">
-                <PlayerCard
-                  mini
-                  nombre={j.nombre || "Jugador"}
-                  posicion={j.posicion || "MED"}
-                  media={st?.media_general || 65}
-                  nivel={st?.nivel || 1}
-                  avatar={j.avatar_url}
-                />
-              </Link>
-            );
-          })}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 justify-center">
+          {filtrados.map((j) => (
+            <Link key={j.id} href={`/jugadores/${j.id}`} className="hover:scale-105 transition-transform">
+              <PlayerCard
+                mini
+                nombre={j.nombre || "Jugador"}
+                posicion={j.posicion || "MED"}
+                media={j.media_general || 65}
+                nivel={j.nivel || 1}
+                avatar={null}
+              />
+            </Link>
+          ))}
         </div>
       )}
     </div>
