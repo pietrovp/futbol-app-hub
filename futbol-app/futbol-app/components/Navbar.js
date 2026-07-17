@@ -75,9 +75,14 @@ export default function Navbar() {
             </Link>
           ))}
           {esAdmin && (
-            <Link href="/admin" className="px-3 py-2 rounded-lg text-sm font-medium text-cancha-amarillo hover:bg-white/10 transition-colors">
-              Admin
-            </Link>
+            <>
+              <Link href="/admin" className="px-3 py-2 rounded-lg text-sm font-medium text-cancha-amarillo hover:bg-white/10 transition-colors">
+                Admin
+              </Link>
+              <Link href="/admin/pagos" className="px-3 py-2 rounded-lg text-sm font-medium text-cancha-amarillo hover:bg-white/10 transition-colors">
+                Pagos
+              </Link>
+            </>
           )}
           {usuario ? (
             <button
@@ -122,7 +127,14 @@ export default function Navbar() {
             </Link>
           ))}
           {esAdmin && (
-            <Link href="/admin" onClick={() => setMenuOpen(false)} className="px-3 py-2 rounded-lg text-sm font-medium text-cancha-amarillo hover:bg-white/10">Admin</Link>
+            <>
+              <Link href="/admin" onClick={() => setMenuOpen(false)} className="px-3 py-2 rounded-lg text-sm font-medium text-cancha-amarillo hover:bg-white/10">
+                Admin
+              </Link>
+              <Link href="/admin/pagos" onClick={() => setMenuOpen(false)} className="px-3 py-2 rounded-lg text-sm font-medium text-cancha-amarillo hover:bg-white/10">
+                Pagos
+              </Link>
+            </>
           )}
           {usuario ? (
             <button onClick={salir} className="px-3 py-2 text-left rounded-lg text-sm font-medium hover:bg-white/10">
