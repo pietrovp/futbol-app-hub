@@ -4,6 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { formatCurrency, getMetodoLabel } from "../../lib/paymentHelpers";
 
+function formatBs(value) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "";
+  return new Intl.NumberFormat("es-VE", {
+    style: "currency",
+    currency: "VES",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
 export default function CreditosPage() {
   const [usuario, setUsuario] = useState(null);
   const [creditosActuales, setCreditosActuales] = useState(null);
@@ -16,6 +26,10 @@ export default function CreditosPage() {
   const [paso, setPaso] = useState("paquetes");
   const [seleccionado, setSeleccionado] = useState(null);
   const [metodo, setMetodo] = useState("pago_movil");
+
+  const [bcvRate, setBcvRate] = useState(null);
+  const [bcvFecha, setBcvFecha] = useState("");
+  const [bcvError, setBcvError] = useState("");
 
   const [form, setForm] = useState({
     reference: "",
@@ -64,6 +78,20 @@ export default function CreditosPage() {
         setCreditosActuales(perfil?.creditos ?? 0);
       }
 
+      try {
+        const res = await fetch("/api/bcv-rate", { cache: "no-store" });
+        const data = await res.json();
+
+        if (!res.ok) {
+          setBcvError(data.error || "No se pudo cargar la tasa BCV.");
+        } else {
+          setBcvRate(data.usdRate || null);
+          setBcvFecha(data.fechaValor || "");
+        }
+      } catch (error) {
+        setBcvError("No se pudo conectar con la tasa BCV.");
+      }
+
       setLoading(false);
     }
 
@@ -80,17 +108,34 @@ export default function CreditosPage() {
     [settings, metodo]
   );
 
+  const montoBsCalculado = useMemo(() => {
+    if (!paquete || !bcvRate) return null;
+    return Number(paquete.precio_usd) * Number(bcvRate);
+  }, [paquete, bcvRate]);
+
+  useEffect(() => {
+    if (metodo === "pago_movil" && montoBsCalculado) {
+      setForm((prev) => ({
+        ...prev,
+        amount_bs: montoBsCalculado.toFixed(2),
+      }));
+    }
+  }, [metodo, montoBsCalculado]);
+
   function elegirPaquete(pkg) {
     setSeleccionado(pkg.code);
     setPaso("pasarela");
+    setMensaje("");
   }
 
   function volverAPaquetes() {
     setPaso("paquetes");
+    setMensaje("");
   }
 
   function continuarAReporte() {
     setPaso("reporte");
+    setMensaje("");
   }
 
   async function subirComprobante(file, userId) {
@@ -195,30 +240,40 @@ export default function CreditosPage() {
 
       {paso === "paquetes" && (
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {packages.map((pkg) => (
-            <div
-              key={pkg.id}
-              className="text-left rounded-2xl bg-white p-5 shadow-card border border-gray-100 flex flex-col justify-between"
-            >
-              <div>
-                <p className="text-xs text-gray-500">{pkg.code.toUpperCase()}</p>
-                <h3 className="font-bold text-lg text-gray-800 mt-1">{pkg.nombre}</h3>
-                <p className="text-cancha-verde font-black text-2xl mt-3">
-                  {pkg.creditos} ⚡
-                </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  {formatCurrency(pkg.precio_usd, "USD")}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => elegirPaquete(pkg)}
-                className="mt-4 w-full rounded-xl py-2.5 text-sm font-semibold bg-cancha-verde text-white hover:bg-cancha-verdeoscuro transition"
+          {packages.map((pkg) => {
+            const montoBs = bcvRate ? Number(pkg.precio_usd) * Number(bcvRate) : null;
+
+            return (
+              <div
+                key={pkg.id}
+                className="text-left rounded-2xl bg-white p-5 shadow-card border border-gray-100 flex flex-col justify-between"
               >
-                Comprar
-              </button>
-            </div>
-          ))}
+                <div>
+                  <p className="text-xs text-gray-500">{pkg.code.toUpperCase()}</p>
+                  <h3 className="font-bold text-lg text-gray-800 mt-1">{pkg.nombre}</h3>
+                  <p className="text-cancha-verde font-black text-2xl mt-3">
+                    {pkg.creditos} ⚡
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {formatCurrency(pkg.precio_usd, "USD")}
+                  </p>
+                  {montoBs ? (
+                    <p className="text-sm text-cancha-verdeoscuro font-semibold mt-1">
+                      {formatBs(montoBs)}
+                    </p>
+                  ) : null}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => elegirPaquete(pkg)}
+                  className="mt-4 w-full rounded-xl py-2.5 text-sm font-semibold bg-cancha-verde text-white hover:bg-cancha-verdeoscuro transition"
+                >
+                  Comprar
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -238,6 +293,28 @@ export default function CreditosPage() {
               {paquete.nombre} · {paquete.creditos} créditos ·{" "}
               {formatCurrency(paquete.precio_usd, "USD")}
             </p>
+
+            {metodo === "pago_movil" && montoBsCalculado ? (
+              <div className="mt-2">
+                <p className="text-sm text-gray-500">Monto equivalente en bolívares</p>
+                <p className="text-lg font-black text-cancha-verdeoscuro">
+                  {formatBs(montoBsCalculado)}
+                </p>
+                {bcvRate ? (
+                  <p className="text-xs text-gray-500">
+                    Tasa BCV: {bcvRate.toLocaleString("es-VE", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 6,
+                    })}
+                    {bcvFecha ? ` · Fecha valor: ${bcvFecha}` : ""}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
+            {metodo === "pago_movil" && bcvError ? (
+              <p className="text-xs text-red-500 mt-2">{bcvError}</p>
+            ) : null}
           </div>
 
           <div>
@@ -323,6 +400,12 @@ export default function CreditosPage() {
               {formatCurrency(paquete.precio_usd, "USD")} vía{" "}
               {getMetodoLabel(metodo)}.
             </p>
+
+            {metodo === "pago_movil" && montoBsCalculado ? (
+              <p className="text-sm text-cancha-verdeoscuro font-semibold mt-1">
+                Monto sugerido en Bs: {formatBs(montoBsCalculado)}
+              </p>
+            ) : null}
           </div>
 
           {!usuario && (

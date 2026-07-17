@@ -50,7 +50,7 @@ export default async function DetallePartido({ params }) {
     if (idsUsuarios.length > 0) {
       const { data } = await supabase
         .from("perfiles")
-        .select("id, nombre, posicion, nivel, media_general")
+        .select("id, nombre, posicion, nivel, media_general, avatar_url")
         .in("id", idsUsuarios);
 
       perfilesData = data || [];
@@ -65,7 +65,7 @@ export default async function DetallePartido({ params }) {
         posicion: perfil?.posicion || "MED",
         media: perfil?.media_general || 65,
         nivel: perfil?.nivel || 1,
-        avatarUrl: null,
+        avatarUrl: perfil?.avatar_url || null,
       };
     });
   }
@@ -118,13 +118,19 @@ export default async function DetallePartido({ params }) {
             <span className="font-semibold text-gray-700">
               {cuposLibres > 0 ? cuposLibres + " cupos libres" : "Cupo lleno"}
             </span>
-            <span className="text-gray-500">{inscritos.length}/{partido.cupos_totales}</span>
+            <span className="text-gray-500">
+              {inscritos.length}/{partido.cupos_totales}
+            </span>
           </div>
           <div className="w-full bg-gray-100 rounded-full h-2.5">
             <div
               className={
                 "h-2.5 rounded-full transition-all " +
-                (cuposLibres <= 0 ? "bg-red-400" : ocupacion > 70 ? "bg-yellow-400" : "bg-cancha-verde")
+                (cuposLibres <= 0
+                  ? "bg-red-400"
+                  : ocupacion > 70
+                  ? "bg-yellow-400"
+                  : "bg-cancha-verde")
               }
               style={{ width: Math.min(ocupacion, 100) + "%" }}
             />
@@ -161,6 +167,7 @@ export default async function DetallePartido({ params }) {
                     {jugador.nombre.slice(0, 2).toUpperCase()}
                   </div>
                 )}
+
                 <div className="flex-1">
                   <p className="font-semibold text-gray-800 text-sm">{jugador.nombre}</p>
                   <div className="flex items-center gap-2 mt-0.5">
@@ -175,6 +182,7 @@ export default async function DetallePartido({ params }) {
                     <span className="text-xs text-gray-500">Nivel {jugador.nivel}</span>
                   </div>
                 </div>
+
                 <div className="text-right">
                   <p className="text-lg font-black text-cancha-verdeoscuro">{jugador.media}</p>
                   <p className="text-[10px] text-gray-400 -mt-1">MEDIA</p>
