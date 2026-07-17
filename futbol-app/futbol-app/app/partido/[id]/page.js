@@ -44,14 +44,21 @@ export default async function DetallePartido({ params }) {
       .select("id, usuario_id, goles, asistencias")
       .eq("partido_id", id);
 
+    console.log("INSCRIPCIONES:", inscripcionesData);
+
     const idsUsuarios = (inscripcionesData || []).map((i) => i.usuario_id);
+
+    console.log("IDS USUARIOS:", idsUsuarios);
 
     let perfilesData = [];
     if (idsUsuarios.length > 0) {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("perfiles")
         .select("id, nombre, posicion, avatar_url, nivel")
         .in("id", idsUsuarios);
+
+      console.log("PERFILES DATA:", data);
+      console.log("PERFILES ERROR:", error);
 
       perfilesData = data || [];
     }
