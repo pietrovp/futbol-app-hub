@@ -13,14 +13,22 @@ export default async function Home() {
       .from("partidos")
       .select("*, inscripciones(count)")
       .order("fecha", { ascending: true });
+
     partidos = data || [];
   }
 
-  const proximos = partidos.slice(0, 3);
+  const proximos = partidos.filter((p) => p.estado !== "finalizado");
+  const jugados = partidos
+    .filter((p) => p.estado === "finalizado")
+    .sort((a, b) => {
+      const fechaA = new Date(`${a.fecha || ""}T${a.hora || "00:00:00"}`).getTime();
+      const fechaB = new Date(`${b.fecha || ""}T${b.hora || "00:00:00"}`).getTime();
+      return fechaB - fechaA;
+    })
+    .slice(0, 4);
 
   return (
     <div className="flex flex-col gap-8">
-      {/* Hero */}
       <div className="bg-gradient-to-br from-cancha-verdeoscuro to-cancha-verde rounded-3xl p-8 text-white relative overflow-hidden">
         <div className="absolute -right-8 -top-8 text-9xl opacity-10">⚽</div>
         <div className="relative z-10">
@@ -47,7 +55,6 @@ export default async function Home() {
         </div>
       </div>
 
-      {/* Stats rápidas */}
       <div className="grid grid-cols-3 gap-4">
         {[
           { icon: "🏟️", label: "Canchas", value: "6+" },
@@ -62,21 +69,23 @@ export default async function Home() {
         ))}
       </div>
 
-      {/* Lista de partidos */}
       <div id="partidos">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-gray-800">Próximos partidos</h2>
-          <span className="text-sm text-cancha-verde font-medium">{partidos.length} disponibles</span>
+          <span className="text-sm text-cancha-verde font-medium">
+            {proximos.length} disponibles
+          </span>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          {partidos.length === 0 && (
+          {proximos.length === 0 && (
             <div className="col-span-2 bg-white rounded-2xl p-8 text-center text-gray-400 shadow-card">
               <div className="text-4xl mb-2">📅</div>
-              <p>Todavía no hay partidos publicados.</p>
+              <p>No hay partidos próximos en este momento.</p>
             </div>
           )}
-          {partidos.map((partido) => (
+
+          {proximos.map((partido) => (
             <PartidoCard
               key={partido.id}
               partido={{
@@ -88,13 +97,56 @@ export default async function Home() {
                 cuposTotales: partido.cupos_totales,
                 cuposOcupados: partido.inscripciones?.[0]?.count || 0,
                 precio: partido.precio,
+                estado: partido.estado,
               }}
             />
           ))}
         </div>
       </div>
 
-      {/* CTA Gamificación */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-gray-800">Partidos jugados recientemente</h2>
+          <span className="text-sm text-gray-500">{jugados.length} recientes</span>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {jugados.length === 0 ? (
+            <div className="col-span-2 bg-white rounded-2xl p-8 text-center text-gray-400 shadow-card">
+              <div className="text-4xl mb-2">🏁</div>
+              <p>Aún no hay partidos finalizados.</p>
+            </div>
+          ) : (
+            jugados.map((partido) => (
+              <Link
+                key={partido.id}
+                href={`/partido/${partido.id}`}
+                className="bg-white rounded-2xl p-5 shadow-card border border-gray-100 hover:shadow-lg transition"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+                      Finalizado
+                    </p>
+                    <h3 className="font-bold text-gray-800 text-lg mt-1">{partido.cancha}</h3>
+                    <p className="text-sm text-gray-500">{partido.zona}</p>
+                  </div>
+                  <div className="rounded-xl bg-cancha-gris px-3 py-2 text-center min-w-[88px]">
+                    <p className="text-[10px] text-gray-400 uppercase">Resultado</p>
+                    <p className="text-xl font-black text-cancha-verdeoscuro">
+                      {partido.goles_equipo1 ?? 0} - {partido.goles_equipo2 ?? 0}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 mt-4">
+                  Toca para ver equipos y resultado final.
+                </p>
+              </Link>
+            ))
+          )}
+        </div>
+      </div>
+
       <div className="bg-gradient-to-r from-purple-600 to-purple-800 rounded-2xl p-6 text-white">
         <h3 className="font-black text-lg">🃏 Tu carta de jugador te espera</h3>
         <p className="text-white/80 text-sm mt-1">

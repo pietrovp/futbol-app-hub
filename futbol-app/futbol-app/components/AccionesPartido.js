@@ -13,6 +13,9 @@ export default function AccionesPartido({ partidoId, cuposLibres, estado, inscri
   const [procesando, setProcesando] = useState(false);
   const [mensaje, setMensaje] = useState("");
 
+  const partidoCerradoParaCambios =
+    estado === "equipos_listos" || estado === "en_curso" || estado === "finalizado";
+
   useEffect(() => {
     async function cargar() {
       if (!supabase) {
@@ -54,6 +57,11 @@ export default function AccionesPartido({ partidoId, cuposLibres, estado, inscri
   async function unirse() {
     if (!usuario) {
       setMensaje("Inicia sesión para unirte.");
+      return;
+    }
+
+    if (partidoCerradoParaCambios) {
+      setMensaje("Este partido ya no acepta nuevas inscripciones.");
       return;
     }
 
@@ -107,6 +115,11 @@ export default function AccionesPartido({ partidoId, cuposLibres, estado, inscri
   }
 
   async function cancelar() {
+    if (partidoCerradoParaCambios) {
+      setMensaje("Ya no puedes cancelar tu inscripción porque el partido ya está armado o finalizado.");
+      return;
+    }
+
     setProcesando(true);
     setMensaje("");
 
@@ -190,30 +203,47 @@ export default function AccionesPartido({ partidoId, cuposLibres, estado, inscri
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        {inscripcionId ? (
+        {estado === "finalizado" ? (
+          <div className="rounded-xl bg-gray-100 text-gray-700 px-4 py-3 text-sm font-medium">
+            🏁 Este partido ya finalizó. Solo puedes ver el resultado y los equipos.
+          </div>
+        ) : inscripcionId ? (
           <>
             <div className="rounded-xl bg-green-50 text-green-700 px-4 py-3 text-sm font-medium">
               ✅ Ya estás inscrito en este partido
             </div>
-            <button
-              onClick={cancelar}
-              disabled={procesando}
-              className="rounded-xl py-3 text-sm font-bold bg-red-500 text-white hover:bg-red-600 transition disabled:opacity-50"
-            >
-              {procesando ? "Procesando..." : "Cancelar inscripción"}
-            </button>
+
+            {partidoCerradoParaCambios ? (
+              <div className="rounded-xl bg-yellow-50 text-yellow-800 px-4 py-3 text-sm">
+                Las inscripciones ya están cerradas para este partido.
+              </div>
+            ) : (
+              <button
+                onClick={cancelar}
+                disabled={procesando}
+                className="rounded-xl py-3 text-sm font-bold bg-red-500 text-white hover:bg-red-600 transition disabled:opacity-50"
+              >
+                {procesando ? "Procesando..." : "Cancelar inscripción"}
+              </button>
+            )}
           </>
         ) : (
           <button
             onClick={unirse}
-            disabled={procesando || cuposLibres <= 0}
+            disabled={procesando || cuposLibres <= 0 || partidoCerradoParaCambios}
             className={`rounded-xl py-3 text-sm font-bold transition ${
-              cuposLibres <= 0
+              cuposLibres <= 0 || partidoCerradoParaCambios
                 ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                 : "bg-cancha-verde text-white hover:bg-cancha-verdeoscuro"
             }`}
           >
-            {cuposLibres <= 0 ? "Sin cupo" : procesando ? "Procesando..." : "⚡ Unirme al partido"}
+            {partidoCerradoParaCambios
+              ? "Inscripciones cerradas"
+              : cuposLibres <= 0
+              ? "Sin cupo"
+              : procesando
+              ? "Procesando..."
+              : "⚡ Unirme al partido"}
           </button>
         )}
       </div>
