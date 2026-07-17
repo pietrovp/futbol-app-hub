@@ -1,183 +1,342 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
-import Link from "next/link";
+import { formatCurrency, getMetodoLabel } from "../../lib/paymentHelpers";
 
-const PAQUETES = [
-  {
-    id: "starter",
-    nombre: "Starter",
-    partidos: 4,
-    precio: 12,
-    precioUnidad: 3.0,
-    color: "from-gray-400 to-gray-500",
-    popular: false,
-    descripcion: "Para conocer la experiencia",
-    icono: "⚡",
-  },
-  {
-    id: "jugador",
-    nombre: "Jugador",
-    partidos: 8,
-    precio: 20,
-    precioUnidad: 2.5,
-    color: "from-cancha-verde to-cancha-verdeoscuro",
-    popular: true,
-    descripcion: "El favorito de la comunidad",
-    icono: "⚽",
-  },
-  {
-    id: "pro",
-    nombre: "Pro",
-    partidos: 16,
-    precio: 35,
-    precioUnidad: 2.19,
-    color: "from-yellow-400 to-orange-500",
-    popular: false,
-    descripcion: "Para los más comprometidos",
-    icono: "🏆",
-  },
-  {
-    id: "elite",
-    nombre: "Élite",
-    partidos: 30,
-    precio: 60,
-    precioUnidad: 2.0,
-    color: "from-purple-500 to-purple-800",
-    popular: false,
-    descripcion: "Máximo ahorro y privilegios",
-    icono: "👑",
-  },
-];
-
-export default function Creditos() {
-  const [creditosActuales, setCreditosActuales] = useState(null);
-  const [seleccionado, setSeleccionado] = useState(null);
+export default function CreditosPage() {
   const [usuario, setUsuario] = useState(null);
+  const [creditosActuales, setCreditosActuales] = useState(null);
+  const [packages, setPackages] = useState([]);
+  const [settings, setSettings] = useState([]);
+  const [seleccionado, setSeleccionado] = useState(null);
+  const [metodo, setMetodo] = useState("pago_movil");
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [mensaje, setMensaje] = useState("");
+
+  const [form, setForm] = useState({
+    reference: "",
+    payer_phone: "",
+    payer_document: "",
+    payer_bank: "",
+    payer_name: "",
+    amount_bs: "",
+  });
 
   useEffect(() => {
     async function cargar() {
-      if (!supabase) return;
-      const { data: { user } } = await supabase.auth.getUser();
-      setUsuario(user);
-      if (!user) return;
-      const { data } = await supabase.from("perfiles").select("creditos").eq("id", user.id).single();
-      setCreditosActuales(data?.creditos ?? 0);
+      if (!supabase) {
+        setLoading(false);
+        return;
+      }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      setUsuario(user || null);
+
+      const [pkgRes, setRes] = await Promise.all([
+        supabase
+          .from("credit_packages")
+          .select("*")
+          .eq("activo", true)
+          .order("orden", { ascending: true }),
+        supabase
+          .from("merchant_payment_settings")
+          .select("*")
+          .eq("activo", true),
+      ]);
+
+      setPackages(pkgRes.data || []);
+      setSettings(setRes.data || []);
+
+      if (user) {
+        const { data: perfil } = await supabase
+          .from("perfiles")
+          .select("creditos")
+          .eq("id", user.id)
+          .single();
+
+        setCreditosActuales(perfil?.creditos ?? 0);
+      }
+
+      setLoading(false);
     }
+
     cargar();
   }, []);
 
+  const paquete = useMemo(
+    () => packages.find((p) => p.code === seleccionado) || null,
+    [packages, seleccionado]
+  );
+
+  const metodoConfig = useMemo(
+    () => settings.find((s) => s.metodo === metodo) || null,
+    [settings, metodo]
+  );
+
+  async function subirComprobante(file, userId) {
+    const ext = file.name.split(".").pop();
+    const filePath = `${userId}/${Date.now()}.${ext}`;
+
+    const { error } = await supabase.storage
+      .from("payment-proofs")
+      .upload(filePath, file, { upsert: false });
+
+    if (error) throw error;
+
+    const { data } = supabase.storage
+      .from("payment-proofs")
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  }
+
+  async function reportarPago(e) {
+    e.preventDefault();
+    setMensaje("");
+
+    if (!usuario) {
+      setMensaje("Debes iniciar sesión para reportar el pago.");
+      return;
+    }
+
+    if (!paquete) {
+      setMensaje("Selecciona un paquete.");
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      let proofUrl = null;
+      const file = e.target.proof.files?.[0];
+
+      if (file) {
+        proofUrl = await subirComprobante(file, usuario.id);
+      }
+
+      const { error } = await supabase.from("payments").insert({
+        user_id: usuario.id,
+        package_id: paquete.id,
+        method: metodo,
+        status: "submitted",
+        amount_usd: paquete.precio_usd,
+        amount_bs: form.amount_bs ? Number(form.amount_bs) : null,
+        reference: form.reference,
+        payer_phone: form.payer_phone || null,
+        payer_document: form.payer_document || null,
+        payer_bank: form.payer_bank || null,
+        payer_name: form.payer_name || null,
+        proof_url: proofUrl,
+      });
+
+      if (error) throw error;
+
+      setMensaje("Pago reportado correctamente. Quedó pendiente por aprobación.");
+      setForm({
+        reference: "",
+        payer_phone: "",
+        payer_document: "",
+        payer_bank: "",
+        payer_name: "",
+        amount_bs: "",
+      });
+      e.target.reset();
+    } catch (error) {
+      setMensaje(error.message || "No se pudo reportar el pago.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (loading) {
+    return <p className="text-sm text-gray-500">Cargando paquetes...</p>;
+  }
+
   return (
     <div className="flex flex-col gap-8">
-      {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Paquetes de créditos</h1>
-          <p className="text-gray-500 text-sm mt-1">Cada crédito = 1 partido. Compra más y paga menos por partido.</p>
+          <p className="text-sm text-gray-500 mt-1">
+            Compra créditos y úsalos para unirte a partidos.
+          </p>
         </div>
+
         {creditosActuales !== null && (
-          <div className="bg-cancha-verde/10 border border-cancha-verde/20 rounded-2xl px-4 py-3 text-right">
+          <div className="bg-cancha-verde/10 border border-cancha-verde/20 rounded-2xl px-4 py-3">
             <p className="text-xs text-gray-500">Mis créditos</p>
-            <p className="text-2xl font-black text-cancha-verdeoscuro">{creditosActuales} ⚡</p>
+            <p className="text-2xl font-black text-cancha-verdeoscuro">
+              {creditosActuales} ⚡
+            </p>
           </div>
         )}
       </div>
 
-      {/* Paquetes */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {PAQUETES.map((pkg) => (
-          <div
+        {packages.map((pkg) => (
+          <button
             key={pkg.id}
-            onClick={() => setSeleccionado(pkg.id)}
-            className={`relative rounded-2xl overflow-hidden cursor-pointer transition-all hover:scale-105 ${
-              seleccionado === pkg.id
-                ? "ring-4 ring-cancha-amarillo scale-105"
-                : "ring-0"
+            type="button"
+            onClick={() => setSeleccionado(pkg.code)}
+            className={`text-left rounded-2xl bg-white p-5 shadow-card border transition ${
+              seleccionado === pkg.code
+                ? "border-cancha-verde ring-2 ring-cancha-verde/30"
+                : "border-gray-100 hover:border-cancha-verde/30"
             }`}
           >
-            {pkg.popular && (
-              <div className="absolute top-3 right-3 z-10 bg-cancha-amarillo text-cancha-verdeoscuro text-xs font-black px-2 py-0.5 rounded-full">
-                ★ Popular
-              </div>
-            )}
-            <div className={`bg-gradient-to-br ${pkg.color} p-5 text-white`}>
-              <div className="text-3xl mb-2">{pkg.icono}</div>
-              <h3 className="font-black text-xl">{pkg.nombre}</h3>
-              <p className="text-white/70 text-xs">{pkg.descripcion}</p>
-            </div>
-            <div className="bg-white p-4">
-              <div className="flex items-end gap-1 mb-1">
-                <span className="text-3xl font-black text-gray-800">${pkg.precio}</span>
-                <span className="text-gray-400 text-sm mb-1">USD</span>
-              </div>
-              <p className="text-cancha-verde font-semibold text-sm">{pkg.partidos} créditos</p>
-              <p className="text-gray-400 text-xs">${pkg.precioUnidad.toFixed(2)}/partido</p>
-
-              {/* Barra de ahorro visual */}
-              <div className="mt-3">
-                <div className="w-full bg-gray-100 rounded-full h-1.5">
-                  <div
-                    className="h-1.5 rounded-full bg-cancha-verde"
-                    style={{ width: `${Math.round((1 - pkg.precioUnidad / 3) * 100)}%` }}
-                  />
-                </div>
-                <p className="text-xs text-gray-400 mt-1">{Math.round((1 - pkg.precioUnidad / 3) * 100)}% de ahorro vs precio único</p>
-              </div>
-            </div>
-          </div>
+            <p className="text-xs text-gray-500">{pkg.code.toUpperCase()}</p>
+            <h3 className="font-bold text-lg text-gray-800 mt-1">{pkg.nombre}</h3>
+            <p className="text-cancha-verde font-black text-2xl mt-3">{pkg.creditos} ⚡</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {formatCurrency(pkg.precio_usd, "USD")}
+            </p>
+          </button>
         ))}
       </div>
 
-      {/* Acción de compra */}
-      {seleccionado && (
-        <div className="bg-white rounded-2xl shadow-card p-6">
-          {(() => {
-            const pkg = PAQUETES.find(p => p.id === seleccionado);
-            return (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div>
-                  <p className="font-bold text-gray-800">Paquete {pkg.nombre} seleccionado</p>
-                  <p className="text-gray-500 text-sm">{pkg.partidos} créditos por ${pkg.precio} USD</p>
-                </div>
-                {usuario ? (
-                  <button
-                    className="px-6 py-3 bg-cancha-verde text-white font-bold rounded-xl hover:bg-cancha-verdeoscuro transition-colors"
-                    onClick={() => alert(`Integración de pago próximamente para el paquete ${pkg.nombre}`)}
-                  >
-                    Comprar ${pkg.precio} →
-                  </button>
-                ) : (
-                  <Link
-                    href="/login"
-                    className="px-6 py-3 bg-cancha-verde text-white font-bold rounded-xl hover:bg-cancha-verdeoscuro transition-colors"
-                  >
-                    Inicia sesión para comprar
-                  </Link>
-                )}
-              </div>
-            );
-          })()}
-        </div>
-      )}
+      <div className="bg-white rounded-2xl p-5 shadow-card border border-gray-100">
+        <h2 className="font-semibold text-gray-800 mb-3">Método de pago</h2>
 
-      {/* Info beneficios */}
-      <div className="bg-gradient-to-br from-cancha-verdeoscuro to-cancha-verde rounded-2xl p-6 text-white">
-        <h3 className="font-black text-lg mb-4">¿Por qué comprar créditos?</h3>
-        <div className="grid sm:grid-cols-3 gap-4">
-          {[
-            { icon: "💸", title: "Más créditos, menos costo", desc: "El paquete Élite te ahorra 33% vs pagar por partido" },
-            { icon: "⚡", title: "Reserva instantánea", desc: "Únete a partidos sin necesidad de pagar cada vez" },
-            { icon: "🃏", title: "Sube tu carta", desc: "Juega más y desbloquea logros que mejoran tu media" },
-          ].map(({ icon, title, desc }) => (
-            <div key={title} className="bg-white/10 rounded-xl p-4">
-              <div className="text-2xl mb-2">{icon}</div>
-              <p className="font-semibold text-sm">{title}</p>
-              <p className="text-white/70 text-xs mt-1">{desc}</p>
-            </div>
+        <div className="flex gap-3 flex-wrap">
+          {["pago_movil", "zelle"].map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMetodo(m)}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
+                metodo === m
+                  ? "bg-cancha-verde text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              {getMetodoLabel(m)}
+            </button>
           ))}
         </div>
+
+        {metodoConfig && (
+          <div className="mt-5 rounded-2xl bg-cancha-gris p-4">
+            <h3 className="font-semibold text-gray-800 mb-2">
+              Instrucciones de {getMetodoLabel(metodo)}
+            </h3>
+
+            {metodo === "pago_movil" ? (
+              <div className="text-sm text-gray-700 space-y-1">
+                <p>Banco: {metodoConfig.banco}</p>
+                <p>Teléfono: {metodoConfig.telefono}</p>
+                <p>Documento: {metodoConfig.documento}</p>
+                <p>Titular: {metodoConfig.titular}</p>
+                {metodoConfig.instrucciones && <p>{metodoConfig.instrucciones}</p>}
+              </div>
+            ) : (
+              <div className="text-sm text-gray-700 space-y-1">
+                <p>Correo Zelle: {metodoConfig.correo_zelle}</p>
+                <p>Beneficiario: {metodoConfig.nombre_zelle}</p>
+                {metodoConfig.instrucciones && <p>{metodoConfig.instrucciones}</p>}
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      <form
+        onSubmit={reportarPago}
+        className="bg-white rounded-2xl p-5 shadow-card border border-gray-100 flex flex-col gap-4"
+      >
+        <div>
+          <h2 className="font-semibold text-gray-800">Ya pagué</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Reporta tu pago para que el admin lo apruebe y se acrediten tus créditos.
+          </p>
+        </div>
+
+        {!usuario && (
+          <div className="rounded-xl bg-yellow-50 text-yellow-800 px-4 py-3 text-sm">
+            Debes iniciar sesión antes de reportar un pago.
+          </div>
+        )}
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <input
+            placeholder="Referencia"
+            value={form.reference}
+            onChange={(e) => setForm({ ...form, reference: e.target.value })}
+            className="rounded-xl border border-gray-200 px-4 py-3 text-sm"
+            required
+          />
+          <input
+            placeholder="Nombre de quien pagó"
+            value={form.payer_name}
+            onChange={(e) => setForm({ ...form, payer_name: e.target.value })}
+            className="rounded-xl border border-gray-200 px-4 py-3 text-sm"
+            required
+          />
+          <input
+            placeholder="Teléfono del emisor"
+            value={form.payer_phone}
+            onChange={(e) => setForm({ ...form, payer_phone: e.target.value })}
+            className="rounded-xl border border-gray-200 px-4 py-3 text-sm"
+          />
+          <input
+            placeholder="Documento del emisor"
+            value={form.payer_document}
+            onChange={(e) => setForm({ ...form, payer_document: e.target.value })}
+            className="rounded-xl border border-gray-200 px-4 py-3 text-sm"
+          />
+          <input
+            placeholder="Banco emisor"
+            value={form.payer_bank}
+            onChange={(e) => setForm({ ...form, payer_bank: e.target.value })}
+            className="rounded-xl border border-gray-200 px-4 py-3 text-sm"
+          />
+          <input
+            placeholder="Monto en Bs. (opcional)"
+            type="number"
+            step="0.01"
+            value={form.amount_bs}
+            onChange={(e) => setForm({ ...form, amount_bs: e.target.value })}
+            className="rounded-xl border border-gray-200 px-4 py-3 text-sm"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Comprobante
+          </label>
+          <input
+            type="file"
+            name="proof"
+            accept="image/*,.pdf"
+            className="block w-full text-sm"
+          />
+        </div>
+
+        {paquete && (
+          <div className="rounded-xl bg-green-50 text-green-800 px-4 py-3 text-sm">
+            Vas a reportar el paquete <strong>{paquete.nombre}</strong> por{" "}
+            {formatCurrency(paquete.precio_usd, "USD")}.
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={!usuario || !paquete || submitting}
+          className={`rounded-xl py-3 text-sm font-bold transition ${
+            !usuario || !paquete || submitting
+              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+              : "bg-cancha-verde text-white hover:bg-cancha-verdeoscuro"
+          }`}
+        >
+          {submitting ? "Enviando..." : "Reportar pago"}
+        </button>
+
+        {mensaje && <p className="text-sm text-gray-500">{mensaje}</p>}
+      </form>
     </div>
   );
 }
