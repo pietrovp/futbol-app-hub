@@ -14,23 +14,86 @@
  *   - avatar: string (URL opcional)
  */
 
-const NIVEL_COLORES = [
-  "from-gray-400 to-gray-500",      // Nivel 1 - Bronce
-  "from-gray-300 to-gray-400",      // Nivel 2 - Plata baja
-  "from-yellow-400 to-yellow-600",  // Nivel 3 - Oro
-  "from-purple-400 to-purple-700",  // Nivel 4 - Élite
-  "from-cancha-amarillo to-orange-500", // Nivel 5 - Leyenda
-];
+function getRareza(media) {
+  if (media >= 91) {
+    return {
+      label: "TOTY",
+      gradiente: "from-blue-900 via-blue-700 to-blue-900",
+      textoNivel: "text-blue-200",
+      borde: "border-2 border-blue-300",
+      glow: "shadow-[0_0_25px_rgba(96,165,250,0.6)]",
+      barraColor: "bg-blue-300",
+      nombreColor: "text-white",
+      brillo: "toty-shine",
+    };
+  }
+  if (media >= 86) {
+    return {
+      label: "Legendario",
+      gradiente: "from-neutral-900 via-neutral-800 to-black",
+      textoNivel: "text-yellow-400",
+      borde: "border-2 border-yellow-500/70",
+      glow: "shadow-[0_0_18px_rgba(234,179,8,0.35)]",
+      barraColor: "bg-yellow-400",
+      nombreColor: "text-yellow-100",
+      brillo: "card-shine",
+    };
+  }
+  if (media >= 81) {
+    return {
+      label: "Oro brillante",
+      gradiente: "from-yellow-300 via-yellow-500 to-amber-600",
+      textoNivel: "text-yellow-900",
+      borde: "border-2 border-yellow-200",
+      glow: "shadow-[0_0_16px_rgba(250,204,21,0.5)]",
+      barraColor: "bg-white",
+      nombreColor: "text-yellow-950",
+      brillo: "card-shine",
+    };
+  }
+  if (media >= 75) {
+    return {
+      label: "Oro",
+      gradiente: "from-yellow-500 to-yellow-700",
+      textoNivel: "text-yellow-100",
+      borde: "border border-yellow-300/50",
+      glow: "shadow-lg",
+      barraColor: "bg-yellow-200",
+      nombreColor: "text-white",
+      brillo: "card-shine",
+    };
+  }
+  if (media >= 70) {
+    return {
+      label: "Plata",
+      gradiente: "from-gray-300 to-gray-500",
+      textoNivel: "text-gray-100",
+      borde: "border border-gray-200/60",
+      glow: "shadow-lg",
+      barraColor: "bg-gray-100",
+      nombreColor: "text-white",
+      brillo: "card-shine",
+    };
+  }
+  return {
+    label: "Bronce",
+    gradiente: "from-amber-700 to-amber-900",
+    textoNivel: "text-amber-200",
+    borde: "border border-amber-600/50",
+    glow: "shadow-lg",
+    barraColor: "bg-amber-300",
+    nombreColor: "text-white",
+    brillo: "card-shine",
+  };
+}
 
-const NIVEL_LABELS = ["Bronce", "Plata", "Oro", "Élite", "Leyenda"];
-
-function StatBar({ label, value }) {
+function StatBar({ label, value, color }) {
   return (
     <div className="flex items-center gap-1.5">
       <span className="text-xs font-bold text-white/80 w-8">{value}</span>
       <div className="flex-1 bg-white/20 rounded-full h-1">
         <div
-          className="h-1 rounded-full bg-cancha-amarillo"
+          className={`h-1 rounded-full ${color}`}
           style={{ width: `${value}%` }}
         />
       </div>
@@ -51,32 +114,33 @@ export default function PlayerCard({
   avatar = null,
   mini = false,
 }) {
-  const nivelIdx = Math.min(Math.max(nivel - 1, 0), 4);
-  const gradiente = NIVEL_COLORES[nivelIdx];
-  const nivelLabel = NIVEL_LABELS[nivelIdx];
+  const r = getRareza(media);
 
   if (mini) {
     return (
-      <div className={`relative card-shine bg-gradient-to-br ${gradiente} rounded-xl p-3 shadow-lg text-white w-28 flex flex-col items-center gap-1`}>
-        <span className="text-xs font-bold opacity-80">{nivelLabel}</span>
-        <span className="text-2xl font-black">{media}</span>
+      <div
+        className={`relative ${r.brillo} bg-gradient-to-br ${r.gradiente} ${r.borde} ${r.glow} rounded-xl p-3 text-white w-28 flex flex-col items-center gap-1`}
+      >
+        <span className={`text-xs font-bold ${r.textoNivel}`}>{r.label}</span>
+        <span className={`text-2xl font-black ${r.nombreColor}`}>{media}</span>
         <span className="text-xs font-bold">{posicion}</span>
         <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-lg">
           {avatar ? <img src={avatar} className="w-10 h-10 rounded-full object-cover" alt={nombre} /> : "👤"}
         </div>
-        <span className="text-xs font-semibold text-center leading-tight">{nombre}</span>
+        <span className={`text-xs font-semibold text-center leading-tight ${r.nombreColor}`}>{nombre}</span>
       </div>
     );
   }
 
   return (
-    <div className={`relative card-shine bg-gradient-to-br ${gradiente} rounded-2xl p-5 shadow-xl text-white w-full max-w-xs mx-auto`}>
-      {/* Header */}
+    <div
+      className={`relative ${r.brillo} bg-gradient-to-br ${r.gradiente} ${r.borde} ${r.glow} rounded-2xl p-5 text-white w-full max-w-xs mx-auto`}
+    >
       <div className="flex items-start justify-between mb-3">
         <div>
-          <div className="text-4xl font-black leading-none">{media}</div>
+          <div className={`text-4xl font-black leading-none ${r.nombreColor}`}>{media}</div>
           <div className="text-sm font-bold mt-0.5">{posicion}</div>
-          <div className="text-xs opacity-70 mt-1">{nivelLabel}</div>
+          <div className={`text-xs mt-1 font-semibold ${r.textoNivel}`}>{r.label}</div>
         </div>
         <div className="w-20 h-20 rounded-xl bg-white/20 overflow-hidden flex items-center justify-center text-4xl">
           {avatar
@@ -85,22 +149,19 @@ export default function PlayerCard({
         </div>
       </div>
 
-      {/* Nombre */}
-      <div className="text-center font-black text-lg tracking-wide mb-3 drop-shadow">
+      <div className={`text-center font-black text-lg tracking-wide mb-3 drop-shadow ${r.nombreColor}`}>
         {nombre.toUpperCase()}
       </div>
 
-      {/* Stats */}
       <div className="flex flex-col gap-1.5 mb-3">
-        <StatBar label="RIT" value={stats.ritmo} />
-        <StatBar label="TIR" value={stats.tiro} />
-        <StatBar label="PAS" value={stats.pase} />
-        <StatBar label="REG" value={stats.regate} />
-        <StatBar label="DEF" value={stats.defensa} />
-        <StatBar label="FIS" value={stats.fisico} />
+        <StatBar label="RIT" value={stats.ritmo} color={r.barraColor} />
+        <StatBar label="TIR" value={stats.tiro} color={r.barraColor} />
+        <StatBar label="PAS" value={stats.pase} color={r.barraColor} />
+        <StatBar label="REG" value={stats.regate} color={r.barraColor} />
+        <StatBar label="DEF" value={stats.defensa} color={r.barraColor} />
+        <StatBar label="FIS" value={stats.fisico} color={r.barraColor} />
       </div>
 
-      {/* Footer stats */}
       <div className="flex justify-around border-t border-white/20 pt-3 text-center">
         <div>
           <div className="text-lg font-bold">{partidosJugados}</div>
