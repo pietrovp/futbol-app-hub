@@ -56,7 +56,7 @@ export default function OrganizarPartido() {
 
     const { data: inscripcionesData } = await supabase
       .from("inscripciones")
-      .select("id, usuario_id, goles, equipo")
+      .select("id, usuario_id, goles, asistencias, equipo")
       .eq("partido_id", partidoId);
 
     const idsUsuarios = (inscripcionesData || []).map((i) => i.usuario_id);
@@ -74,6 +74,7 @@ export default function OrganizarPartido() {
       const perfil = perfilesData.find((p) => p.id === i.usuario_id);
       return {
         id: i.id,
+        usuario_id: i.usuario_id,
         nombre: perfil?.nombre || "Jugador",
         posicion: perfil?.posicion || "MED",
         media: perfil?.media_general || 65,
@@ -134,6 +135,38 @@ export default function OrganizarPartido() {
     setProcesando(false);
   }
 
+  async function recalcularEstadisticasJugador(usuarioId) {
+    const { data: historial, error: historialError } = await supabase
+      .from("inscripciones")
+      .select("goles, asistencias")
+      .eq("usuario_id", usuarioId);
+
+    if (historialError) return;
+
+    const lista = historial || [];
+    const partidos_jugados = lista.length;
+    const goles_total = lista.reduce((acc, i) => acc + (i.goles || 0), 0);
+    const asistencias_total = lista.reduce((acc, i) => acc + (i.asistencias || 0), 0);
+
+    const media_general = Math.min(
+      99,
+      65 + goles_total * 1 + asistencias_total * 0.5 + Math.floor(partidos_jugados / 3)
+    );
+
+    await supabase
+      .from("perfiles")
+      .update({ media_general })
+      .eq("id", usuarioId);
+
+    await supabase.from("estadisticas_jugador").upsert({
+      usuario_id: usuarioId,
+      partidos_jugados,
+      goles_total,
+      asistencias_total,
+      media_general,
+    });
+  }
+
   async function guardarResultado(e) {
     e.preventDefault();
     setProcesando(true);
@@ -163,7 +196,7 @@ export default function OrganizarPartido() {
       .filter((j) => j.equipo === 2)
       .reduce((acc, j) => acc + (Number(goles[j.id]) || 0), 0);
 
-    const { error } = await supabase
+    const { error: partidoError } = await supabase
       .from("partidos")
       .update({
         goles_equipo1: golesEquipo1,
@@ -172,13 +205,18 @@ export default function OrganizarPartido() {
       })
       .eq("id", partidoId);
 
-    if (error) {
-      setMensaje("No se pudo finalizar: " + error.message);
+    if (partidoError) {
+      setMensaje("No se pudo finalizar: " + partidoError.message);
       setProcesando(false);
       return;
     }
 
+    for (const jugador of inscritos) {
+      await recalcularEstadisticasJugador(jugador.usuario_id);
+    }
+
     await cargarTodo();
+    setMensaje("Resultado guardado y estadísticas actualizadas.");
     setProcesando(false);
   }
 
