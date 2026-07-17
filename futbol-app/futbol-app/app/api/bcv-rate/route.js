@@ -21,9 +21,12 @@ export async function GET() {
 
     const data = await response.json();
 
+    const usdRate = data.promedio ?? data.valor ?? null;
+    const fechaValor = data.fechaActualizacion ?? data.fecha ?? "";
+
     return NextResponse.json({
-      usdRate: data.promedio ?? data.valor ?? null,
-      fechaValor: data.fechaActualizacion ?? data.fecha || "",
+      usdRate,
+      fechaValor,
       source: "dolarapi",
       raw: data,
     });
