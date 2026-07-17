@@ -41,7 +41,7 @@ export default async function DetallePartido({ params }) {
 
     const { data: inscripcionesData } = await supabase
       .from("inscripciones")
-      .select("id, usuario_id, goles, asistencias")
+      .select("id, usuario_id, goles, asistencias, equipo")
       .eq("partido_id", id);
 
     const idsUsuarios = (inscripcionesData || []).map((i) => i.usuario_id);
@@ -66,6 +66,8 @@ export default async function DetallePartido({ params }) {
         media: perfil?.media_general || 65,
         nivel: perfil?.nivel || 1,
         avatarUrl: perfil?.avatar_url || null,
+        equipo: i.equipo || null,
+        goles: i.goles || 0,
       };
     });
   }
@@ -137,7 +139,12 @@ export default async function DetallePartido({ params }) {
           </div>
         </div>
 
-        <AccionesPartido partidoId={partido.id} cuposLibres={cuposLibres} />
+        <AccionesPartido
+          partidoId={partido.id}
+          cuposLibres={cuposLibres}
+          estado={partido.estado}
+          inscritos={inscritos}
+        />
       </div>
 
       <div className="bg-white rounded-2xl p-5 shadow-card border border-gray-100">
