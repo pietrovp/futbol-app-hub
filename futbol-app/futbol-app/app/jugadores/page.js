@@ -13,16 +13,23 @@ export default function Jugadores() {
 
   useEffect(() => {
     async function cargar() {
-      if (!supabase) { setCargando(false); return; }
+      if (!supabase) {
+        setCargando(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("perfiles")
-        .select("id, nombre, posicion, nivel, media_general")
+        .select("id, nombre, posicion, nivel, media_general, avatar_url")
         .order("nombre");
+
       console.log("JUGADORES DATA:", data);
       if (error) console.error("ERROR JUGADORES:", error);
+
       setJugadores(data || []);
       setCargando(false);
     }
+
     cargar();
   }, []);
 
@@ -38,7 +45,9 @@ export default function Jugadores() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-800">Jugadores</h1>
-        <p className="text-gray-500 text-sm">Descubre y conoce a los jugadores de la comunidad</p>
+        <p className="text-gray-500 text-sm">
+          Descubre y conoce a los jugadores de la comunidad
+        </p>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -49,6 +58,7 @@ export default function Jugadores() {
           onChange={(e) => setBusqueda(e.target.value)}
           className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-cancha-verde"
         />
+
         <div className="flex gap-2 flex-wrap">
           {posiciones.map((pos) => (
             <button
@@ -78,14 +88,18 @@ export default function Jugadores() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 justify-center">
           {filtrados.map((j) => (
-            <Link key={j.id} href={`/jugadores/${j.id}`} className="hover:scale-105 transition-transform">
+            <Link
+              key={j.id}
+              href={`/jugadores/${j.id}`}
+              className="hover:scale-105 transition-transform"
+            >
               <PlayerCard
                 mini
                 nombre={j.nombre || "Jugador"}
                 posicion={j.posicion || "MED"}
                 media={j.media_general || 65}
                 nivel={j.nivel || 1}
-                avatar={null}
+                avatar={j.avatar_url || null}
               />
             </Link>
           ))}
