@@ -13,6 +13,15 @@ function formatFecha(fechaStr) {
   return `${DIAS[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`;
 }
 
+function formatHora(horaStr) {
+  if (!horaStr) return "";
+  const [horas, minutos] = horaStr.split(":");
+  const h = parseInt(horas, 10);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${minutos} ${ampm}`;
+}
+
 export default function PartidoCard({ partido }) {
   const router = useRouter();
   const [cargando, setCargando] = useState(false);
@@ -103,73 +112,96 @@ export default function PartidoCard({ partido }) {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-card border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow">
-      <div className="bg-gradient-to-r from-cancha-verdeoscuro to-cancha-verde px-5 py-3 flex items-center justify-between">
-        <div>
-          <h3 className="font-bold text-white text-base">{partido.cancha}</h3>
-          <p className="text-white/70 text-xs">{partido.zona}</p>
+    <div className="group bg-[#121212] rounded-2xl border border-zinc-800 overflow-hidden hover:border-zinc-600 transition-colors flex flex-col">
+
+      {/* HEADER CON IMAGEN DE FONDO Y DEGRADADO */}
+      <div className="relative h-40 w-full overflow-hidden">
+        {partido.imagenUrl ? (
+          <img
+            src={partido.imagenUrl}
+            alt={partido.cancha}
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-zinc-900" />
+        )}
+
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/10" />
+
+        <div className="absolute top-4 right-4 flex flex-col items-end">
+          <span className="text-white font-black text-lg leading-none drop-shadow-md">${partido.precio}</span>
+          <span className="text-[9px] text-green-400 font-bold uppercase tracking-widest mt-1.5 drop-shadow-md">1 Crédito</span>
         </div>
-        <div className="text-right">
-          <span className="text-cancha-amarillo font-bold text-lg">${partido.precio}</span>
-          <p className="text-white/60 text-xs">equivale a 1 crédito</p>
+
+        <div className="absolute bottom-0 left-0 right-0 p-5">
+          <h3 className="font-black text-white text-2xl leading-tight tracking-tight drop-shadow-lg">
+            {partido.cancha}
+          </h3>
+          <p className="text-zinc-300 text-xs mt-1 font-semibold drop-shadow-md">{partido.zona}</p>
         </div>
       </div>
 
-      <div className="px-5 py-4 flex flex-col gap-3">
-        <div className="flex items-center gap-4 text-sm text-gray-600">
-          <span className="flex items-center gap-1">
-            <span>📅</span> {formatFecha(partido.fecha)}
+      {/* CUERPO DE LA TARJETA */}
+      <div className="px-5 py-5 flex flex-col gap-5 flex-grow">
+
+        <div className="flex items-center gap-6 text-sm text-zinc-400 font-medium">
+          <span className="flex items-center gap-2">
+            <svg className="w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            {formatFecha(partido.fecha)}
           </span>
-          <span className="flex items-center gap-1">
-            <span>⏰</span> {partido.hora}
+          <span className="flex items-center gap-2">
+            <svg className="w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            {formatHora(partido.hora)}
           </span>
         </div>
 
         <div>
-          <div className="flex justify-between text-xs text-gray-500 mb-1">
-            <span>{lleno ? "Cupo lleno" : `${cuposLibres} cupos disponibles`}</span>
-            <span>{partido.cuposOcupados}/{partido.cuposTotales}</span>
+          <div className="flex justify-between text-xs text-zinc-500 mb-2 font-medium">
+            <span className={lleno ? "text-red-400 font-bold" : ""}>
+              {lleno ? "Cupos agotados" : `${cuposLibres} cupos disponibles`}
+            </span>
+            <span className="text-zinc-300 font-bold">{partido.cuposOcupados} <span className="text-zinc-600 font-normal">/ {partido.cuposTotales}</span></span>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-2">
+          <div className="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden">
             <div
-              className={`h-2 rounded-full transition-all ${
-                lleno ? "bg-red-400" : ocupacion > 70 ? "bg-yellow-400" : "bg-cancha-verde"
+              className={`h-full rounded-full transition-all duration-500 ${
+                lleno ? "bg-red-500" : ocupacion > 75 ? "bg-yellow-500" : "bg-green-500"
               }`}
               style={{ width: `${Math.min(ocupacion, 100)}%` }}
             />
           </div>
         </div>
 
-        <div className="flex gap-2 mt-1">
+        <div className="flex gap-3 mt-auto pt-2">
           <button
             disabled={lleno || cargando}
             onClick={unirse}
-            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all ${
+            className={`flex-1 rounded-xl py-3 text-sm font-bold transition-all flex justify-center items-center gap-2 ${
               lleno || cargando
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-cancha-verde text-white hover:bg-cancha-verdeoscuro active:scale-95"
+                ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+                : "bg-green-500 text-black hover:bg-green-400 active:scale-[0.98]"
             }`}
           >
-            {lleno ? "Sin cupo" : cargando ? "Procesando..." : "⚡ Unirme"}
+            {lleno ? "Sin cupo" : cargando ? "Procesando..." : "Unirme ahora"}
           </button>
           <Link
             href={`/partido/${partido.id}`}
-            className="px-4 py-2.5 rounded-xl border border-cancha-verde text-cancha-verdeoscuro text-sm font-medium hover:bg-cancha-verde/5 transition-colors"
+            className="px-5 py-3 rounded-xl bg-zinc-900 border border-zinc-700 text-white text-sm font-bold hover:bg-zinc-800 hover:border-zinc-600 transition-all flex items-center justify-center"
           >
             Ver
           </Link>
         </div>
 
         {mensaje && (
-          <p
-            className={`text-xs text-center rounded-lg py-1.5 px-2 ${
+          <div
+            className={`text-xs text-center rounded-xl py-2.5 px-3 font-medium border ${
               mensaje.includes("uniste")
-                ? "bg-green-50 text-green-700"
-                : "bg-red-50 text-red-600"
+                ? "bg-green-500/10 text-green-400 border-green-500/20"
+                : "bg-red-500/10 text-red-400 border-red-500/20"
             }`}
           >
             {mensaje}
-          </p>
+          </div>
         )}
       </div>
     </div>

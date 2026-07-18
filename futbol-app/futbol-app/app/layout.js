@@ -8,10 +8,13 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="es">
-      <body>
+    <html lang="es" className="scroll-smooth">
+      {/* Cambiamos a fondo claro, texto oscuro y acentos verdes */}
+      <body className="bg-gray-50 text-gray-900 font-sans antialiased min-h-screen flex flex-col selection:bg-green-500 selection:text-white">
         <Navbar />
-        <main className="max-w-5xl mx-auto px-4 py-8">{children}</main>
+        <main className="flex-grow max-w-6xl mx-auto px-4 py-8 w-full">
+          {children}
+        </main>
       </body>
     </html>
   );

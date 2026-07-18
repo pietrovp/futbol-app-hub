@@ -144,19 +144,38 @@ export default async function DetallePartido({ params }) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <Link href="/" className="text-sm text-cancha-verde hover:underline w-fit">
+    <div className="flex flex-col gap-6 max-w-3xl mx-auto">
+      <Link href="/" className="text-sm text-cancha-verde hover:underline w-fit flex items-center gap-1">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
         Volver a partidos
       </Link>
 
-      <div className="relative rounded-3xl overflow-hidden h-48 md:h-56 bg-gradient-to-br from-cancha-verdeoscuro via-cancha-verde to-emerald-600">
-        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:16px_16px]" />
+      <div className="relative rounded-2xl overflow-hidden h-40 md:h-48 shadow-card">
+        {partido.imagen_url ? (
+          <img
+            src={partido.imagen_url}
+            alt={partido.cancha}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-cancha-verdeoscuro via-cancha-verde to-emerald-600">
+            <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:16px_16px]" />
+          </div>
+        )}
+
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
+
         <div className="absolute top-4 left-5 flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3 py-1.5 rounded-full">
-          <span className="text-white text-xs font-bold tracking-wide">UBICACION</span>
+          <span className="text-white text-[10px] font-bold tracking-widest uppercase">
+            {estaFinalizado ? "Finalizado" : "Próximo partido"}
+          </span>
         </div>
-        <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black/50 to-transparent">
-          <h1 className="text-2xl md:text-3xl font-black text-white">{partido.cancha}</h1>
-          <p className="text-white/80 text-sm">{partido.zona}</p>
+
+        <div className="absolute bottom-0 left-0 right-0 p-5">
+          <h1 className="text-2xl md:text-3xl font-black text-white leading-tight drop-shadow-lg">
+            {partido.cancha}
+          </h1>
+          <p className="text-white/80 text-sm font-medium mt-0.5 drop-shadow-md">{partido.zona}</p>
         </div>
       </div>
 

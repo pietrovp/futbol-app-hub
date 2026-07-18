@@ -14,6 +14,14 @@ function formatBs(value) {
   }).format(value);
 }
 
+// Lista de beneficios limpia para el diseño estructurado
+const BENEFICIOS_DEFAULT = [
+  "Acceso a partidos organizados",
+  "Canchas premium garantizadas",
+  "Sistema de estadísticas y MVP",
+  "Sin mensualidades ni contratos",
+];
+
 export default function CreditosPage() {
   const [usuario, setUsuario] = useState(null);
   const [creditosActuales, setCreditosActuales] = useState(null);
@@ -133,7 +141,7 @@ export default function CreditosPage() {
     setMensaje("");
   }
 
-  function continuarAReporte() {
+  function avanzarAReporte() {
     setPaso("reporte");
     setMensaje("");
   }
@@ -215,120 +223,220 @@ export default function CreditosPage() {
   }
 
   if (loading) {
-    return <p className="text-sm text-gray-500">Cargando paquetes...</p>;
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-400"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+    <div className="flex flex-col gap-10 max-w-6xl mx-auto">
+      {/* Encabezado Principal */}
+      <div className="flex items-center justify-between gap-4 flex-wrap border-b border-zinc-200 pb-5">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Créditos</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Compra créditos y úsalos para unirte a partidos.
+          <h1 className="text-2xl md:text-3xl font-black text-zinc-900 uppercase tracking-tight">
+            Planes y Créditos
+          </h1>
+          <p className="text-sm text-zinc-500 mt-1.5 font-medium">
+            Elige la cantidad de partidos que deseas jugar esta semana.
           </p>
         </div>
 
         {creditosActuales !== null && (
-          <div className="bg-cancha-verde/10 border border-cancha-verde/20 rounded-2xl px-4 py-3">
-            <p className="text-xs text-gray-500">Mis créditos</p>
-            <p className="text-2xl font-black text-cancha-verdeoscuro">
-              {creditosActuales} ⚡
-            </p>
+          <div className="bg-white border border-zinc-200 rounded-2xl px-5 py-3 shadow-sm flex items-center gap-3">
+            <div>
+              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                Tus créditos
+              </p>
+              <p className="text-2xl font-black text-zinc-900 leading-none mt-1">
+                {creditosActuales}
+              </p>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-lg">
+              ⚡
+            </div>
           </div>
         )}
       </div>
 
+      {/* --- PASO 1: PARRILLA DE PAQUETES (TONOS GRISES PREMIUM) --- */}
       {paso === "paquetes" && (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
           {packages.map((pkg) => {
             const montoBs = bcvRate ? Number(pkg.precio_usd) * Number(bcvRate) : null;
+            const precioPorCredito =
+              pkg.creditos && Number(pkg.creditos) > 0
+                ? Number(pkg.precio_usd) / Number(pkg.creditos)
+                : null;
+
+            const esMasPopular = pkg.code?.toLowerCase() === "pro";
 
             return (
               <div
                 key={pkg.id}
-                className="text-left rounded-2xl bg-white p-5 shadow-card border border-gray-100 flex flex-col justify-between"
+                className={`relative flex flex-col rounded-[2rem] overflow-hidden border transition-all duration-300 bg-white ${
+                  esMasPopular
+                    ? "border-emerald-500 ring-4 ring-emerald-500/10 shadow-md lg:-translate-y-2"
+                    : "border-zinc-200 shadow-sm hover:shadow-md"
+                }`}
               >
-                <div>
-                  <p className="text-xs text-gray-500">{pkg.code.toUpperCase()}</p>
-                  <h3 className="font-bold text-lg text-gray-800 mt-1">{pkg.nombre}</h3>
-                  <p className="text-cancha-verde font-black text-2xl mt-3">
-                    {pkg.creditos} ⚡
-                  </p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {formatCurrency(pkg.precio_usd, "USD")}
-                  </p>
-                  {montoBs ? (
-                    <p className="text-sm text-cancha-verdeoscuro font-semibold mt-1">
-                      {formatBs(montoBs)}
-                    </p>
-                  ) : null}
-                </div>
+                {/* Cinta superior naranja sutil para destacar */}
+                {esMasPopular && (
+                  <div className="bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-black uppercase tracking-widest text-center py-2 shadow-sm">
+                    Más Popular 🔥
+                  </div>
+                )}
 
-                <button
-                  type="button"
-                  onClick={() => elegirPaquete(pkg)}
-                  className="mt-4 w-full rounded-xl py-2.5 text-sm font-semibold bg-cancha-verde text-white hover:bg-cancha-verdeoscuro transition"
-                >
-                  Comprar
-                </button>
+                <div className="flex flex-col flex-1 p-6 justify-between gap-6">
+                  <div>
+                    {/* Nombre y Badge de Créditos */}
+                    <div className="flex items-center justify-between">
+                      <span
+                        className={`text-xs font-black uppercase tracking-wider ${
+                          esMasPopular ? "text-emerald-600" : "text-zinc-400"
+                        }`}
+                      >
+                        {pkg.code || "Plan"}
+                      </span>
+                      <span className="text-[11px] font-black bg-zinc-100 text-zinc-700 px-3 py-1 rounded-full uppercase tracking-wide border border-zinc-200/60">
+                        {pkg.creditos} {pkg.creditos === 1 ? "partido" : "partidos"}
+                      </span>
+                    </div>
+
+                    {/* Bloque de Precio (Fondo Gris Claro) */}
+                    <div
+                      className={`text-center rounded-2xl py-6 px-3 border mt-4 ${
+                        esMasPopular
+                          ? "bg-emerald-50/40 border-emerald-100"
+                          : "bg-zinc-50 border-zinc-100"
+                      }`}
+                    >
+                      <div className="text-3xl font-black text-zinc-900 tracking-tight">
+                        {formatCurrency(pkg.precio_usd, "USD")}
+                      </div>
+                      <div className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider mt-1.5">
+                        {pkg.creditos} Créditos ⚡
+                      </div>
+                      {precioPorCredito !== null && (
+                        <div className="text-[10px] text-zinc-400 font-medium mt-1">
+                          {formatCurrency(precioPorCredito, "USD")} por partido
+                        </div>
+                      )}
+                      {montoBs && (
+                        <div className="text-xs text-zinc-500 font-semibold mt-1">
+                          ó {formatBs(montoBs)}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Lista de Beneficios */}
+                    <div className="flex flex-col gap-3 mt-5">
+                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                        Incluye
+                      </p>
+                      {BENEFICIOS_DEFAULT.map((beneficio, i) => (
+                        <div key={i} className="flex items-start gap-3 text-left">
+                          <span
+                            className={`w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                              esMasPopular
+                                ? "border-emerald-500 text-emerald-600 bg-emerald-50"
+                                : "border-zinc-200 text-zinc-400 bg-zinc-50"
+                            }`}
+                          >
+                            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                          </span>
+                          <span className="text-xs text-zinc-600 font-medium leading-snug">
+                            {beneficio}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Botón de compra (Gris Oscuro vs Verde Esmeralda) */}
+                  <button
+                    type="button"
+                    onClick={() => elegirPaquete(pkg)}
+                    className={`w-full rounded-xl py-3 text-sm font-black uppercase tracking-wider transition-all active:scale-[0.98] shadow-sm ${
+                      esMasPopular
+                        ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/10"
+                        : "bg-zinc-800 hover:bg-zinc-700 text-white"
+                    }`}
+                  >
+                    Seleccionar
+                  </button>
+                </div>
               </div>
             );
           })}
         </div>
       )}
 
+      {/* --- PASO 2: SELECCIÓN DE PASARELA Y DATOS --- */}
       {paso === "pasarela" && paquete && (
-        <div className="bg-white rounded-2xl p-5 shadow-card border border-gray-100 flex flex-col gap-5">
+        <div className="max-w-xl mx-auto w-full bg-white rounded-3xl p-6 md:p-8 border border-zinc-200 shadow-sm flex flex-col gap-6">
           <button
             type="button"
             onClick={volverAPaquetes}
-            className="text-sm text-gray-500 hover:text-gray-700 self-start"
+            className="text-xs font-bold text-zinc-400 hover:text-zinc-900 transition-colors flex items-center gap-1.5 self-start uppercase tracking-wider"
           >
-            ← Volver a paquetes
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            Volver a los planes
           </button>
 
-          <div className="rounded-xl bg-cancha-gris p-4">
-            <p className="text-sm text-gray-500">Paquete seleccionado</p>
-            <p className="font-bold text-gray-800">
-              {paquete.nombre} · {paquete.creditos} créditos ·{" "}
-              {formatCurrency(paquete.precio_usd, "USD")}
-            </p>
+          {/* Resumen del pedido */}
+          <div className="rounded-2xl bg-zinc-50 border border-zinc-100 p-5 flex flex-col gap-1.5">
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+              Resumen de orden
+            </span>
+            <div className="flex justify-between items-baseline flex-wrap">
+              <h3 className="font-black text-zinc-900 text-lg">
+                {paquete.nombre} ({paquete.creditos} créditos)
+              </h3>
+              <span className="text-xl font-black text-zinc-900">
+                {formatCurrency(paquete.precio_usd, "USD")}
+              </span>
+            </div>
 
-            {metodo === "pago_movil" && montoBsCalculado ? (
-              <div className="mt-2">
-                <p className="text-sm text-gray-500">Monto equivalente en bolívares</p>
-                <p className="text-lg font-black text-cancha-verdeoscuro">
+            {metodo === "pago_movil" && montoBsCalculado && (
+              <div className="mt-3 pt-3 border-t border-zinc-200 flex justify-between items-center">
+                <span className="text-xs text-zinc-500 font-medium">
+                  Total en Bolívares:
+                </span>
+                <span className="text-lg font-black text-emerald-600">
                   {formatBs(montoBsCalculado)}
-                </p>
-                {bcvRate ? (
-                  <p className="text-xs text-gray-500">
-                    Tasa BCV: {bcvRate.toLocaleString("es-VE", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 6,
-                    })}
-                    {bcvFecha ? ` · Fecha valor: ${bcvFecha}` : ""}
-                  </p>
-                ) : null}
+                </span>
               </div>
-            ) : null}
+            )}
 
-            {metodo === "pago_movil" && bcvError ? (
-              <p className="text-xs text-red-500 mt-2">{bcvError}</p>
-            ) : null}
+            {metodo === "pago_movil" && bcvRate && (
+              <p className="text-[10px] text-zinc-400 font-medium mt-1">
+                Tasa Oficial BCV: {bcvRate.toFixed(2)} Bs/USD {bcvFecha ? `• Valor: ${bcvFecha}` : ""}
+              </p>
+            )}
+            {bcvError && <p className="text-xs text-red-500 mt-1">{bcvError}</p>}
           </div>
 
+          {/* Selector de métodos */}
           <div>
-            <h2 className="font-semibold text-gray-800 mb-3">Método de pago</h2>
-            <div className="flex gap-3 flex-wrap">
+            <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">
+              Método de pago
+            </label>
+            <div className="grid grid-cols-2 gap-3">
               {["pago_movil", "zelle"].map((m) => (
                 <button
                   key={m}
                   type="button"
                   onClick={() => setMetodo(m)}
-                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
+                  className={`py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
                     metodo === m
-                      ? "bg-cancha-verde text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      ? "bg-zinc-900 border-zinc-900 text-white shadow-sm"
+                      : "bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-zinc-100"
                   }`}
                 >
                   {getMetodoLabel(m)}
@@ -337,171 +445,230 @@ export default function CreditosPage() {
             </div>
           </div>
 
+          {/* Caja con los datos de cuenta */}
           {metodoConfig ? (
-            <div className="rounded-2xl bg-cancha-gris p-4">
-              <h3 className="font-semibold text-gray-800 mb-2">
-                Datos para pagar por {getMetodoLabel(metodo)}
-              </h3>
-
+            <div className="rounded-2xl bg-zinc-50 border border-zinc-200 p-5">
+              <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">
+                Cuentas oficiales para transferencia
+              </h4>
               {metodo === "pago_movil" ? (
-                <div className="text-sm text-gray-700 space-y-1">
-                  <p>Banco: {metodoConfig.banco}</p>
-                  <p>Teléfono: {metodoConfig.telefono}</p>
-                  <p>Documento: {metodoConfig.documento}</p>
-                  <p>Titular: {metodoConfig.titular}</p>
-                  {metodoConfig.instrucciones && <p>{metodoConfig.instrucciones}</p>}
+                <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm">
+                  <div>
+                    <span className="text-[10px] block font-bold text-zinc-400 uppercase tracking-wider">Banco</span>
+                    <span className="font-semibold text-zinc-900">{metodoConfig.banco}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] block font-bold text-zinc-400 uppercase tracking-wider">Teléfono</span>
+                    <span className="font-semibold text-zinc-900">{metodoConfig.telefono}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] block font-bold text-zinc-400 uppercase tracking-wider">RIF / C.I</span>
+                    <span className="font-semibold text-zinc-900">{metodoConfig.documento}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] block font-bold text-zinc-400 uppercase tracking-wider">Titular</span>
+                    <span className="font-semibold text-zinc-900">{metodoConfig.titular}</span>
+                  </div>
                 </div>
               ) : (
-                <div className="text-sm text-gray-700 space-y-1">
-                  <p>Correo Zelle: {metodoConfig.correo_zelle}</p>
-                  <p>Beneficiario: {metodoConfig.nombre_zelle}</p>
-                  {metodoConfig.instrucciones && <p>{metodoConfig.instrucciones}</p>}
+                <div className="grid grid-cols-1 gap-y-3 text-sm">
+                  <div>
+                    <span className="text-[10px] block font-bold text-zinc-400 uppercase tracking-wider">Correo Electrónico</span>
+                    <span className="font-semibold text-zinc-900">{metodoConfig.correo_zelle}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] block font-bold text-zinc-400 uppercase tracking-wider">Beneficiario</span>
+                    <span className="font-semibold text-zinc-900">{metodoConfig.nombre_zelle}</span>
+                  </div>
                 </div>
+              )}
+              {metodoConfig.instrucciones && (
+                <p className="text-xs text-zinc-500 bg-white border border-zinc-200 p-2.5 rounded-lg mt-4 font-medium italic">
+                  📢 {metodoConfig.instrucciones}
+                </p>
               )}
             </div>
           ) : (
-            <div className="rounded-xl bg-yellow-50 text-yellow-800 px-4 py-3 text-sm">
-              No hay datos configurados para este método todavía.
+            <div className="rounded-2xl bg-amber-50 text-amber-800 border border-amber-200 p-4 text-sm font-medium">
+              Información de cuenta no disponible en este momento.
             </div>
           )}
 
           <button
             type="button"
             disabled={!metodoConfig}
-            onClick={continuarAReporte}
-            className={`rounded-xl py-3 text-sm font-bold transition ${
+            onClick={avanzarAReporte}
+            className={`rounded-xl py-3.5 text-sm font-black uppercase tracking-wider transition-all ${
               !metodoConfig
-                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                : "bg-cancha-verde text-white hover:bg-cancha-verdeoscuro"
+                ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
+                : "bg-emerald-600 hover:bg-emerald-500 text-white"
             }`}
           >
-            Ya pagué, continuar
+            Ya realicé el pago, continuar
           </button>
         </div>
       )}
 
+      {/* --- PASO 3: FORMULARIO DE REPORTE DETALLADO --- */}
       {paso === "reporte" && paquete && (
         <form
           onSubmit={reportarPago}
-          className="bg-white rounded-2xl p-5 shadow-card border border-gray-100 flex flex-col gap-4"
+          className="max-w-xl mx-auto w-full bg-white rounded-3xl p-6 md:p-8 border border-zinc-200 shadow-sm flex flex-col gap-6"
         >
           <button
             type="button"
             onClick={() => setPaso("pasarela")}
-            className="text-sm text-gray-500 hover:text-gray-700 self-start"
+            className="text-xs font-bold text-zinc-400 hover:text-zinc-900 transition-colors flex items-center gap-1.5 self-start uppercase tracking-wider"
           >
-            ← Volver a datos de pago
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            Volver a cuentas
           </button>
 
-          <div>
-            <h2 className="font-semibold text-gray-800">Reportar mi pago</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Paquete <strong>{paquete.nombre}</strong> por{" "}
-              {formatCurrency(paquete.precio_usd, "USD")} vía{" "}
-              {getMetodoLabel(metodo)}.
+          <div className="border-b border-zinc-100 pb-4">
+            <h2 className="text-xl font-black text-zinc-900 uppercase tracking-tight">
+              Reportar Transacción
+            </h2>
+            <p className="text-xs text-zinc-500 mt-1 font-medium">
+              Adjunta los datos del comprobante para acreditar tus tokens.
             </p>
-
-            {metodo === "pago_movil" && montoBsCalculado ? (
-              <p className="text-sm text-cancha-verdeoscuro font-semibold mt-1">
-                Monto sugerido en Bs: {formatBs(montoBsCalculado)}
-              </p>
-            ) : null}
           </div>
 
           {!usuario && (
-            <div className="rounded-xl bg-yellow-50 text-yellow-800 px-4 py-3 text-sm">
-              Debes iniciar sesión antes de reportar un pago.
+            <div className="rounded-xl bg-amber-50 text-amber-800 p-3.5 text-xs font-bold">
+              ⚠️ Inicia sesión con tu cuenta antes de reportar un pago.
             </div>
           )}
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <input
-              placeholder="Referencia"
-              value={form.reference}
-              onChange={(e) => setForm({ ...form, reference: e.target.value })}
-              className="rounded-xl border border-gray-200 px-4 py-3 text-sm"
-              required
-            />
-            <input
-              placeholder="Nombre de quien pagó"
-              value={form.payer_name}
-              onChange={(e) => setForm({ ...form, payer_name: e.target.value })}
-              className="rounded-xl border border-gray-200 px-4 py-3 text-sm"
-              required
-            />
-            <input
-              placeholder="Teléfono del emisor"
-              value={form.payer_phone}
-              onChange={(e) => setForm({ ...form, payer_phone: e.target.value })}
-              className="rounded-xl border border-gray-200 px-4 py-3 text-sm"
-            />
-            <input
-              placeholder="Documento del emisor"
-              value={form.payer_document}
-              onChange={(e) => setForm({ ...form, payer_document: e.target.value })}
-              className="rounded-xl border border-gray-200 px-4 py-3 text-sm"
-            />
-            <input
-              placeholder="Banco emisor"
-              value={form.payer_bank}
-              onChange={(e) => setForm({ ...form, payer_bank: e.target.value })}
-              className="rounded-xl border border-gray-200 px-4 py-3 text-sm"
-            />
-            <input
-              placeholder="Monto en Bs. (opcional)"
-              type="number"
-              step="0.01"
-              value={form.amount_bs}
-              onChange={(e) => setForm({ ...form, amount_bs: e.target.value })}
-              className="rounded-xl border border-gray-200 px-4 py-3 text-sm"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                Número de Referencia
+              </label>
+              <input
+                placeholder="Ej. 48291039"
+                value={form.reference}
+                onChange={(e) => setForm({ ...form, reference: e.target.value })}
+                className="rounded-xl bg-zinc-50 border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-all text-zinc-900 placeholder-zinc-400"
+                required
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                Nombre del Titular
+              </label>
+              <input
+                placeholder="Nombre de quien pagó"
+                value={form.payer_name}
+                onChange={(e) => setForm({ ...form, payer_name: e.target.value })}
+                className="rounded-xl bg-zinc-50 border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-all text-zinc-900 placeholder-zinc-400"
+                required
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                Teléfono Emisor
+              </label>
+              <input
+                placeholder="Opcional"
+                value={form.payer_phone}
+                onChange={(e) => setForm({ ...form, payer_phone: e.target.value })}
+                className="rounded-xl bg-zinc-50 border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-all text-zinc-900 placeholder-zinc-400"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                C.I. / RIF Emisor
+              </label>
+              <input
+                placeholder="Opcional"
+                value={form.payer_document}
+                onChange={(e) => setForm({ ...form, payer_document: e.target.value })}
+                className="rounded-xl bg-zinc-50 border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-all text-zinc-900 placeholder-zinc-400"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                Banco de origen
+              </label>
+              <input
+                placeholder="Ej. Banesco"
+                value={form.payer_bank}
+                onChange={(e) => setForm({ ...form, payer_bank: e.target.value })}
+                className="rounded-xl bg-zinc-50 border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-all text-zinc-900 placeholder-zinc-400"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                Monto enviado (Bs.)
+              </label>
+              <input
+                placeholder="Opcional"
+                type="number"
+                step="0.01"
+                value={form.amount_bs}
+                onChange={(e) => setForm({ ...form, amount_bs: e.target.value })}
+                className="rounded-xl bg-zinc-50 border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-all text-zinc-900 placeholder-zinc-400"
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Comprobante
+          <div className="flex flex-col gap-2 bg-zinc-50 border border-zinc-200 p-4 rounded-2xl">
+            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+              Subir Foto del Comprobante
             </label>
             <input
               type="file"
               name="proof"
               accept="image/*,.pdf"
-              className="block w-full text-sm"
+              className="block w-full text-xs text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:uppercase file:bg-zinc-900 file:text-white hover:file:bg-zinc-800 cursor-pointer"
             />
           </div>
 
           <button
             type="submit"
             disabled={!usuario || submitting}
-            className={`rounded-xl py-3 text-sm font-bold transition ${
+            className={`w-full rounded-xl py-3.5 text-sm font-black uppercase tracking-wider transition-all ${
               !usuario || submitting
-                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                : "bg-cancha-verde text-white hover:bg-cancha-verdeoscuro"
+                ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
+                : "bg-emerald-600 hover:bg-emerald-500 text-white"
             }`}
           >
-            {submitting ? "Enviando..." : "Reportar pago"}
+            {submitting ? "Procesando Reporte..." : "Enviar Reporte Oficial"}
           </button>
 
-          {mensaje && <p className="text-sm text-gray-500">{mensaje}</p>}
+          {mensaje && (
+            <p className="text-xs text-center font-bold text-gray-500 bg-zinc-50 p-2.5 rounded-xl border border-zinc-200">
+              {mensaje}
+            </p>
+          )}
         </form>
       )}
 
+      {/* --- PASO 4: PANTALLA DE ÉXITO --- */}
       {paso === "confirmado" && (
-        <div className="bg-white rounded-2xl p-6 shadow-card border border-gray-100 flex flex-col items-center gap-4 text-center">
-          <span className="text-5xl">✅</span>
-          <h2 className="font-bold text-gray-800 text-lg">Pago reportado</h2>
-          <p className="text-sm text-gray-500 max-w-sm">
-            Tu pago quedó pendiente por aprobación. En cuanto sea confirmado, se
-            acreditarán tus créditos automáticamente.
-          </p>
+        <div className="max-w-md mx-auto w-full bg-white rounded-3xl p-8 border border-zinc-200 shadow-sm flex flex-col items-center gap-5 text-center">
+          <div className="w-16 h-16 bg-green-50 border border-green-200 text-green-500 text-3xl flex items-center justify-center rounded-full shadow-inner">
+            ✓
+          </div>
+          <div>
+            <h2 className="font-black text-zinc-900 text-xl uppercase tracking-tight">
+              Reporte Recibido
+            </h2>
+            <p className="text-sm text-zinc-500 mt-2 font-medium leading-relaxed">
+              Tu recibo está en cola de revisión administrativa. Te notificaremos cuando tus créditos estén cargados en el sistema.
+            </p>
+          </div>
           <button
             type="button"
             onClick={() => {
               setPaso("paquetes");
               setSeleccionado(null);
             }}
-            className="px-5 py-2.5 rounded-xl bg-cancha-verde text-white text-sm font-semibold"
+            className="w-full px-5 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-sm font-bold uppercase tracking-wider transition-all"
           >
-            Volver a paquetes
+            Entendido
           </button>
         </div>
       )}

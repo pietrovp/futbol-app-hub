@@ -2,11 +2,14 @@ import PartidoCard from "../components/PartidoCard";
 import { supabase } from "../lib/supabaseClient";
 import Link from "next/link";
 
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+
 export default async function Home() {
   let partidos = [];
+
 
   if (supabase) {
     const { data } = await supabase
@@ -14,8 +17,10 @@ export default async function Home() {
       .select("*, inscripciones(count)")
       .order("fecha", { ascending: true });
 
+
     partidos = data || [];
   }
+
 
   const proximos = partidos.filter((p) => p.estado !== "finalizado");
   const jugados = partidos
@@ -27,63 +32,120 @@ export default async function Home() {
     })
     .slice(0, 4);
 
+
   return (
-    <div className="flex flex-col gap-8">
-      <div className="bg-gradient-to-br from-cancha-verdeoscuro to-cancha-verde rounded-3xl p-8 text-white relative overflow-hidden">
-        <div className="absolute -right-8 -top-8 text-9xl opacity-10">⚽</div>
-        <div className="relative z-10">
-          <h1 className="text-3xl md:text-4xl font-black leading-tight">
-            Fútbol en <span className="text-cancha-amarillo">Barquisimeto</span>
+    <div className="flex flex-col gap-12 max-w-6xl mx-auto pb-12">
+      
+      {/* --- HERO SECTION --- */}
+      <div className="relative w-full bg-[#0B0C15] rounded-[2.5rem] overflow-hidden px-6 py-16 md:py-24 flex flex-col items-center text-center shadow-2xl">
+        
+        {/* Glow de fondo */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-[#00FF9D]/10 blur-[120px] pointer-events-none"></div>
+        
+        <div className="relative z-10 max-w-3xl flex flex-col items-center">
+          <h1 className="text-4xl md:text-7xl font-black text-white uppercase tracking-tighter leading-[0.9]">
+            Juega fútbol <br />
+            <span className="text-[#00FF9D]">cuando quieras</span>
           </h1>
-          <p className="mt-2 text-white/80 text-base max-w-md">
-            Únete a partidos organizados en las mejores canchas de la ciudad. Sin equipo, sin excusas.
+          <p className="mt-6 text-gray-400 text-sm md:text-lg max-w-lg font-medium">
+            Únete a partidos organizados en Barquisimeto sin compromisos. ¿Sin equipo? No hay excusas. Reserva tu primer partido ahora.
           </p>
-          <div className="flex gap-3 mt-5 flex-wrap">
+          
+          <div className="mt-10 flex gap-4">
             <Link
               href="#partidos"
-              className="px-5 py-2.5 bg-cancha-amarillo text-cancha-verdeoscuro font-bold rounded-xl text-sm hover:bg-yellow-400 transition-colors"
+              className="px-8 py-4 bg-[#00FF9D] text-[#0B0C15] font-black uppercase tracking-wider rounded-full text-sm hover:bg-[#00e58d] transition-all transform hover:scale-105 shadow-[0_0_30px_rgba(0,255,157,0.3)]"
             >
-              Ver partidos ⚡
+              Ver partidos
             </Link>
-            <Link
-              href="/creditos"
-              className="px-5 py-2.5 bg-white/15 text-white font-semibold rounded-xl text-sm hover:bg-white/25 transition-colors"
-            >
-              Comprar créditos
-            </Link>
+          </div>
+        </div>
+
+
+        {/* Imágenes flotantes estilo app moderna */}
+        <div className="relative w-full max-w-5xl h-48 md:h-64 mt-16 flex justify-center items-center gap-4 md:gap-8 z-10">
+          <div className="w-32 h-40 md:w-56 md:h-72 rounded-2xl overflow-hidden shadow-2xl transform -rotate-6 translate-y-4 md:translate-y-8 border-4 border-[#121422]">
+            <img src="https://images.unsplash.com/photo-1511886929837-354d827aae26?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Jugador" className="w-full h-full object-cover opacity-80 hover:opacity-100 transition-opacity" />
+          </div>
+          <div className="w-40 h-48 md:w-72 md:h-80 rounded-2xl overflow-hidden shadow-2xl z-20 border-4 border-[#121422] relative group">
+            <div className="absolute inset-0 bg-[#00FF9D]/20 group-hover:bg-transparent transition-colors z-10"></div>
+            <img src="https://images.unsplash.com/photo-1579952363873-27f3bade9f55?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Cancha" className="w-full h-full object-cover" />
+          </div>
+          <div className="w-32 h-40 md:w-56 md:h-72 rounded-2xl overflow-hidden shadow-2xl transform rotate-6 translate-y-4 md:translate-y-8 border-4 border-[#121422]">
+            <img src="https://images.unsplash.com/photo-1526232761682-d26e03ac148e?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Zapatos" className="w-full h-full object-cover opacity-80 hover:opacity-100 transition-opacity" />
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        {[
-          { icon: "🏟️", label: "Canchas", value: "6+" },
-          { icon: "⚽", label: "Partidos/semana", value: "12+" },
-          { icon: "👥", label: "Jugadores", value: "200+" },
-        ].map(({ icon, label, value }) => (
-          <div key={label} className="bg-white rounded-2xl p-4 text-center shadow-card">
-            <div className="text-2xl">{icon}</div>
-            <div className="font-black text-cancha-verdeoscuro text-xl mt-1">{value}</div>
-            <div className="text-xs text-gray-500">{label}</div>
-          </div>
-        ))}
+
+      {/* --- CÓMO FUNCIONA / ESTADÍSTICAS --- */}
+      <div className="w-full text-center mt-8">
+        <h2 className="text-2xl md:text-3xl font-black text-gray-900 uppercase tracking-tighter mb-8">¿Cómo funciona?</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            { 
+              icon: (
+                <svg className="w-10 h-10 text-[#00FF9D]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+              ), 
+              title: "Busca un partido", 
+              desc: "Encuentra juegos en tu zona." 
+            },
+            { 
+              icon: (
+                <svg className="w-10 h-10 text-[#00FF9D]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+              ), 
+              title: "Reserva tu cupo", 
+              desc: "Usa tus créditos para unirte." 
+            },
+            { 
+              icon: (
+                <svg className="w-10 h-10 text-[#00FF9D]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+              ), 
+              title: "Juega y disfruta", 
+              desc: "Preséntate en la cancha y dale." 
+            },
+          ].map((item, i) => (
+            <div key={i} className="bg-white rounded-3xl p-8 shadow-xl shadow-gray-200/50 border border-gray-100 flex flex-col items-center text-center group">
+              
+              {/* Contenedor del Icono */}
+              <div className="w-20 h-20 rounded-full bg-[#0B0C15] flex items-center justify-center mb-6 shadow-lg shadow-gray-300 group-hover:scale-110 transition-transform duration-300">
+                {item.icon}
+              </div>
+              
+              <h3 className="font-black text-lg text-gray-900 uppercase">{item.title}</h3>
+              <p className="text-gray-500 text-sm font-medium mt-2">{item.desc}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div id="partidos">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-800">Próximos partidos</h2>
-          <span className="text-sm text-cancha-verde font-medium">
+
+      {/* --- PRÓXIMOS PARTIDOS --- */}
+      <div id="partidos" className="scroll-mt-24 mt-8">
+        <div className="flex items-center justify-between mb-6 border-b border-gray-200 pb-4">
+          <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">Próximos juegos</h2>
+          <span className="text-sm font-bold bg-[#00FF9D]/20 text-emerald-800 px-3 py-1 rounded-full">
             {proximos.length} disponibles
           </span>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+
+        <div className="grid gap-6 md:grid-cols-2">
           {proximos.length === 0 && (
-            <div className="col-span-2 bg-white rounded-2xl p-8 text-center text-gray-400 shadow-card">
-              <div className="text-4xl mb-2">📅</div>
-              <p>No hay partidos próximos en este momento.</p>
+            <div className="col-span-2 bg-white rounded-3xl p-12 text-center border border-gray-200 shadow-sm">
+              <span className="text-gray-300 mb-3 block">
+                <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+              </span>
+              <p className="text-gray-500 font-medium text-lg">No hay partidos próximos en este momento.</p>
             </div>
           )}
+
 
           {proximos.map((partido) => (
             <PartidoCard
@@ -98,66 +160,53 @@ export default async function Home() {
                 cuposOcupados: partido.inscripciones?.[0]?.count || 0,
                 precio: partido.precio,
                 estado: partido.estado,
+                imagenUrl: partido.imagen_url,
               }}
             />
           ))}
         </div>
       </div>
 
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-800">Partidos jugados recientemente</h2>
-          <span className="text-sm text-gray-500">{jugados.length} recientes</span>
+
+      {/* --- RESULTADOS JUGADOS --- */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-6 border-b border-gray-200 pb-4">
+          <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">Resultados</h2>
         </div>
+
 
         <div className="grid gap-4 md:grid-cols-2">
           {jugados.length === 0 ? (
-            <div className="col-span-2 bg-white rounded-2xl p-8 text-center text-gray-400 shadow-card">
-              <div className="text-4xl mb-2">🏁</div>
-              <p>Aún no hay partidos finalizados.</p>
+            <div className="col-span-2 bg-white rounded-3xl p-12 text-center border border-gray-200 shadow-sm">
+              <p className="text-gray-500 font-medium">Aún no hay resultados para mostrar.</p>
             </div>
           ) : (
             jugados.map((partido) => (
               <Link
                 key={partido.id}
                 href={`/partido/${partido.id}`}
-                className="bg-white rounded-2xl p-5 shadow-card border border-gray-100 hover:shadow-lg transition"
+                className="group bg-[#0B0C15] rounded-3xl p-6 transition-all flex items-center justify-between shadow-xl hover:shadow-[#00FF9D]/10 hover:-translate-y-1 relative overflow-hidden border border-[#1a1c2d]"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+                <div className="absolute top-0 left-0 w-1.5 h-full bg-[#00FF9D]"></div>
+                <div className="pl-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
                       Finalizado
                     </p>
-                    <h3 className="font-bold text-gray-800 text-lg mt-1">{partido.cancha}</h3>
-                    <p className="text-sm text-gray-500">{partido.zona}</p>
                   </div>
-                  <div className="rounded-xl bg-cancha-gris px-3 py-2 text-center min-w-[88px]">
-                    <p className="text-[10px] text-gray-400 uppercase">Resultado</p>
-                    <p className="text-xl font-black text-cancha-verdeoscuro">
-                      {partido.goles_equipo1 ?? 0} - {partido.goles_equipo2 ?? 0}
-                    </p>
-                  </div>
+                  <h3 className="font-black text-white text-xl leading-none uppercase">{partido.cancha}</h3>
+                  <p className="text-xs text-gray-400 mt-2 font-medium">{partido.zona}</p>
                 </div>
-                <p className="text-xs text-gray-400 mt-4">
-                  Toca para ver equipos y resultado final.
-                </p>
+                
+                <div className="bg-[#121422] rounded-2xl px-5 py-3 flex items-center justify-center border border-[#1f233a]">
+                  <p className="text-2xl font-black text-white tracking-wider">
+                    {partido.goles_equipo1 ?? 0}<span className="text-[#00FF9D] mx-2">-</span>{partido.goles_equipo2 ?? 0}
+                  </p>
+                </div>
               </Link>
             ))
           )}
         </div>
-      </div>
-
-      <div className="bg-gradient-to-r from-purple-600 to-purple-800 rounded-2xl p-6 text-white">
-        <h3 className="font-black text-lg">🃏 Tu carta de jugador te espera</h3>
-        <p className="text-white/80 text-sm mt-1">
-          Juega partidos, acumula logros y sube la media de tu carta. Hat trick = +3 media.
-        </p>
-        <Link
-          href="/perfil"
-          className="inline-block mt-4 px-4 py-2 bg-cancha-amarillo text-purple-900 font-bold rounded-xl text-sm hover:bg-yellow-400 transition-colors"
-        >
-          Ver mi carta →
-        </Link>
       </div>
     </div>
   );
