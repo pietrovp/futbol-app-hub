@@ -36,7 +36,6 @@ function promedioMedia(lista) {
   return Math.round(lista.reduce((acc, j) => acc + j.media, 0) / lista.length);
 }
 
-// Reparte jugadores buscando que la suma de "media" quede lo más pareja posible
 function balancearEquipos(jugadores) {
   const ordenados = [...jugadores].sort((a, b) => b.media - a.media);
   const equipo1 = [];
@@ -445,7 +444,6 @@ export default function OrganizarPartido() {
       racha_victorias_max,
     };
 
-    // FIX: Obtener logros ya desbloqueados ANTES de insertar nuevos
     const { data: logrosActivos } = await supabase.from("logros").select("*").eq("activo", true);
     const { data: yaDesbloqueadosAntes } = await supabase
       .from("logros_desbloqueados")
@@ -457,7 +455,6 @@ export default function OrganizarPartido() {
       (l) => !idsDesbloqueados.has(l.id) && cumpleRequisito(l, statsParaLogros)
     );
 
-    // FIX: upsert con ignoreDuplicates para evitar insertar el mismo logro dos veces
     if (nuevosDesbloqueos.length > 0) {
       await supabase
         .from("logros_desbloqueados")
@@ -467,8 +464,7 @@ export default function OrganizarPartido() {
         );
     }
 
-    // FIX: Releer logros_desbloqueados DESPUÉS del upsert para tener la lista definitiva
-    // y calcular el bono con datos frescos, evitando el doble conteo
+    // Releer todos los logros desbloqueados tras el upsert para calcular el bono real
     const { data: todosDesbloqueados } = await supabase
       .from("logros_desbloqueados")
       .select("logro_id, logros(stat_mejora, valor_mejora)")
@@ -478,10 +474,10 @@ export default function OrganizarPartido() {
       .filter((d) => d.logros?.stat_mejora === "media_general")
       .reduce((acc, d) => acc + (d.logros?.valor_mejora || 0), 0);
 
-    const media_general = Math.min(
-      99,
-      65 + goles_total * 1 + asistencias_total * 0.5 + Math.floor(partidos_jugados / 3) + bonoMediaTotal
-    );
+    // FIX PRINCIPAL: la media base es siempre 65.
+    // Los goles, asistencias y partidos jugados NO suben la media.
+    // Solo los bonos de logros con stat_mejora === "media_general" la modifican.
+    const media_general = Math.min(99, 65 + bonoMediaTotal);
 
     const updates = {
       partidos_jugados,
@@ -496,8 +492,8 @@ export default function OrganizarPartido() {
       media_general,
     };
 
-    // Los demás atributos (ritmo, tiro, pase...) no tienen fórmula propia,
-    // así que solo se les suma el bono de los logros recién desbloqueados
+    // Para stats adicionales (ritmo, tiro, pase...) solo se aplica el bono
+    // de los logros RECIÉN desbloqueados en esta llamada, sumado al valor actual del perfil
     const statsAdicionales = nuevosDesbloqueos.filter((l) => l.stat_mejora !== "media_general");
 
     if (statsAdicionales.length > 0) {
@@ -563,8 +559,6 @@ export default function OrganizarPartido() {
       return;
     }
 
-    // FIX: Deduplicar por usuario_id para no procesar el mismo jugador dos veces
-    // si hubiera inscripciones duplicadas en la lista
     const idsUnicos = [...new Set(inscritos.map((j) => j.usuario_id))];
     for (const usuarioId of idsUnicos) {
       await recalcularEstadisticasJugador(usuarioId);
