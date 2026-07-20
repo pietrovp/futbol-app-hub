@@ -1,7 +1,7 @@
 import { supabase } from "../../../lib/supabaseClient";
 import PlayerCard from "../../../components/PlayerCard";
 import LogroBadge from "../../../components/LogroBadge";
-import { calcularLogros } from "../../../lib/logros";
+import { bonusLabel } from "../../../lib/logros";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -58,17 +58,20 @@ function getResultadoStyles(resultado) {
 export default async function JugadorDetalle({ params }) {
   if (!supabase) return notFound();
 
-  const [{ data: perfil }, { data: historialRaw }] = await Promise.all([
-    supabase.from("perfiles").select("*").eq("id", params.id).single(),
-    supabase
-      .from("inscripciones")
-      .select(
-        "partido_id, goles, asistencias, equipo, partidos(cancha, fecha, hora, estado, goles_equipo1, goles_equipo2)"
-      )
-      .eq("usuario_id", params.id)
-      .order("partido_id", { ascending: false })
-      .limit(10),
-  ]);
+  const [{ data: perfil }, { data: historialRaw }, { data: logrosCatalogo }, { data: logrosUsuario }] =
+    await Promise.all([
+      supabase.from("perfiles").select("*").eq("id", params.id).single(),
+      supabase
+        .from("inscripciones")
+        .select(
+          "partido_id, goles, asistencias, equipo, partidos(cancha, fecha, hora, estado, goles_equipo1, goles_equipo2)"
+        )
+        .eq("usuario_id", params.id)
+        .order("partido_id", { ascending: false })
+        .limit(10),
+      supabase.from("logros").select("*").eq("activo", true).order("created_at", { ascending: true }),
+      supabase.from("logros_desbloqueados").select("logro_id").eq("usuario_id", params.id),
+    ]);
 
   if (!perfil) return notFound();
 
@@ -95,13 +98,16 @@ export default async function JugadorDetalle({ params }) {
     regate: perfil.regate ?? 65,
     defensa: perfil.defensa ?? 40,
     fisico: perfil.fisico ?? 63,
-    nivel: perfil.nivel ?? 1,
     partidos_jugados: perfil.partidos_jugados ?? 0,
     goles_total: perfil.goles_total ?? 0,
     asistencias_total: perfil.asistencias_total ?? 0,
   };
 
-  const logros = calcularLogros(st);
+  const idsDesbloqueados = new Set((logrosUsuario || []).map((d) => d.logro_id));
+  const logros = (logrosCatalogo || []).map((l) => ({
+    ...l,
+    desbloqueado: idsDesbloqueados.has(l.id),
+  }));
   const logrosDesbloqueados = logros.filter((l) => l.desbloqueado).length;
 
   return (
@@ -133,7 +139,9 @@ export default async function JugadorDetalle({ params }) {
         <div className="flex flex-col gap-4">
           <div className="bg-white rounded-2xl shadow-card p-5">
             <h2 className="font-bold text-gray-800 text-lg">{perfil.nombre || "Jugador"}</h2>
-            <p className="text-gray-500 text-sm mt-1">{perfil.posicion_preferida || perfil.posicion || "Sin posición"}</p>
+            <p className="text-gray-500 text-sm mt-1">
+              {perfil.posicion_preferida || perfil.posicion || "Sin posición"}
+            </p>
 
             <div className="grid grid-cols-3 gap-3 mt-4">
               {[
@@ -156,11 +164,22 @@ export default async function JugadorDetalle({ params }) {
                 {logrosDesbloqueados}/{logros.length}
               </span>
             </div>
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-              {logros.map((l) => (
-                <LogroBadge key={l.id} label={l.label} desc={l.desc} desbloqueado={l.desbloqueado} />
-              ))}
-            </div>
+
+            {logros.length === 0 ? (
+              <p className="text-sm text-gray-400">Todavía no hay logros disponibles.</p>
+            ) : (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                {logros.map((l) => (
+                  <LogroBadge
+                    key={l.id}
+                    label={l.nombre}
+                    desc={l.descripcion}
+                    bonus={bonusLabel(l)}
+                    desbloqueado={l.desbloqueado}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-2xl shadow-card p-5">

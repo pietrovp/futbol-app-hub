@@ -13,6 +13,7 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "../../../../lib/supabaseClient";
+import { cumpleRequisito } from "../../../../lib/logros";
 
 function iniciales(nombre) {
   return nombre
@@ -35,10 +36,7 @@ function promedioMedia(lista) {
   return Math.round(lista.reduce((acc, j) => acc + j.media, 0) / lista.length);
 }
 
-function clamp(num, min, max) {
-  return Math.max(min, Math.min(max, num));
-}
-
+// Reparte jugadores buscando que la suma de "media" quede lo más pareja posible
 function balancearEquipos(jugadores) {
   const ordenados = [...jugadores].sort((a, b) => b.media - a.media);
   const equipo1 = [];
@@ -57,12 +55,6 @@ function balancearEquipos(jugadores) {
   });
 
   return { equipo1, equipo2 };
-}
-
-function calcularMediaDesdeStats(stats) {
-  return Math.round(
-    (stats.ritmo + stats.tiro + stats.pase + stats.regate + stats.defensa + stats.fisico) / 6
-  );
 }
 
 function JugadorCard({ jugador, modo, onCambiarEquipo, valorGol, onGolChange, dragHandleProps, isDragging }) {
@@ -94,6 +86,7 @@ function JugadorCard({ jugador, modo, onCambiarEquipo, valorGol, onGolChange, dr
 
       <div className="w-10 h-10 rounded-full bg-cancha-verde/15 flex items-center justify-center text-xs font-black text-cancha-verdeoscuro shrink-0 overflow-hidden">
         {jugador.avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img src={jugador.avatarUrl} alt={jugador.nombre} className="w-full h-full object-cover" />
         ) : (
           iniciales(jugador.nombre)
@@ -265,7 +258,7 @@ export default function OrganizarPartido() {
 
     const { data: inscripcionesData } = await supabase
       .from("inscripciones")
-      .select("id, usuario_id, goles, equipo")
+      .select("id, usuario_id, goles, asistencias, equipo")
       .eq("partido_id", partidoId);
 
     const idsUsuarios = (inscripcionesData || []).map((i) => i.usuario_id);
@@ -275,7 +268,7 @@ export default function OrganizarPartido() {
     if (idsUsuarios.length > 0) {
       const { data } = await supabase
         .from("perfiles")
-        .select("id, nombre, posicion, posicion_preferida, media_general, avatar_url, partidos_jugados, goles_total, win_rate")
+        .select("id, nombre, posicion, media_general, avatar_url, partidos_jugados, goles_total, win_rate")
         .in("id", idsUsuarios);
       perfilesData = data || [];
     }
@@ -287,8 +280,8 @@ export default function OrganizarPartido() {
         id: i.id,
         usuario_id: i.usuario_id,
         nombre: perfil?.nombre || "Jugador",
-        posicion: perfil?.posicion_preferida || perfil?.posicion || "MED",
-        media: perfil?.media_general || 64,
+        posicion: perfil?.posicion || "MED",
+        media: perfil?.media_general || 65,
         avatarUrl: perfil?.avatar_url || null,
         equipo: i.equipo ?? null,
         goles: i.goles || 0,
@@ -396,28 +389,25 @@ export default function OrganizarPartido() {
   }
 
   async function recalcularEstadisticasJugador(usuarioId) {
-    const { data: perfilActual, error: perfilError } = await supabase
-      .from("perfiles")
-      .select("id, posicion, posicion_preferida, ritmo, tiro, pase, regate, defensa, fisico")
-      .eq("id", usuarioId)
-      .single();
-
-    if (perfilError || !perfilActual) return;
-
     const { data: historial, error: historialError } = await supabase
       .from("inscripciones")
-      .select("goles, equipo, partidos(goles_equipo1, goles_equipo2, estado)")
-      .eq("usuario_id", usuarioId);
+      .select("goles, asistencias, equipo, partidos(goles_equipo1, goles_equipo2, estado, fecha)")
+      .eq("usuario_id", usuarioId)
+      .order("fecha", { foreignTable: "partidos", ascending: true });
 
     if (historialError) return;
 
     const lista = historial || [];
     const partidos_jugados = lista.length;
     const goles_total = lista.reduce((acc, i) => acc + (i.goles || 0), 0);
+    const asistencias_total = lista.reduce((acc, i) => acc + (i.asistencias || 0), 0);
+    const max_goles_partido = lista.reduce((acc, i) => Math.max(acc, i.goles || 0), 0);
 
     let victorias = 0;
     let derrotas = 0;
     let empates = 0;
+    let rachaActual = 0;
+    let racha_victorias_max = 0;
 
     lista.forEach((i) => {
       if (i.partidos?.estado !== "finalizado" || !i.equipo) return;
@@ -427,98 +417,102 @@ export default function OrganizarPartido() {
 
       if (g1 === g2) {
         empates++;
+        rachaActual = 0;
         return;
       }
 
       const ganoEquipo1 = g1 > g2;
       const gano = (i.equipo === 1 && ganoEquipo1) || (i.equipo === 2 && !ganoEquipo1);
 
-      if (gano) victorias++;
-      else derrotas++;
+      if (gano) {
+        victorias++;
+        rachaActual++;
+        racha_victorias_max = Math.max(racha_victorias_max, rachaActual);
+      } else {
+        derrotas++;
+        rachaActual = 0;
+      }
     });
 
     const partidosDecisivos = victorias + derrotas;
     const win_rate = partidosDecisivos > 0 ? Math.round((victorias / partidosDecisivos) * 100) : 0;
 
-    const posicionBase = perfilActual.posicion_preferida || perfilActual.posicion || "MED";
+    const statsParaLogros = {
+      partidos_jugados,
+      goles_total,
+      victorias,
+      max_goles_partido,
+      racha_victorias_max,
+    };
 
-    const tieneStatsBase =
-      perfilActual.ritmo != null &&
-      perfilActual.tiro != null &&
-      perfilActual.pase != null &&
-      perfilActual.regate != null &&
-      perfilActual.defensa != null &&
-      perfilActual.fisico != null;
+    // Revisa qué logros activos desbloquea el jugador con este resultado
+    const { data: logrosActivos } = await supabase.from("logros").select("*").eq("activo", true);
+    const { data: yaDesbloqueados } = await supabase
+      .from("logros_desbloqueados")
+      .select("logro_id, logros(stat_mejora, valor_mejora)")
+      .eq("usuario_id", usuarioId);
 
-    const statsActuales = tieneStatsBase
-      ? {
-          ritmo: perfilActual.ritmo,
-          tiro: perfilActual.tiro,
-          pase: perfilActual.pase,
-          regate: perfilActual.regate,
-          defensa: perfilActual.defensa,
-          fisico: perfilActual.fisico,
-        }
-      : {
-          ritmo: 64,
-          tiro: 64,
-          pase: 64,
-          regate: 64,
-          defensa: 64,
-          fisico: 64,
-        };
+    const idsDesbloqueados = new Set((yaDesbloqueados || []).map((d) => d.logro_id));
+    const nuevosDesbloqueos = (logrosActivos || []).filter(
+      (l) => !idsDesbloqueados.has(l.id) && cumpleRequisito(l, statsParaLogros)
+    );
 
-    const bonusPartidos = Math.floor(partidos_jugados / 4);
-    const bonusGoles = Math.floor(goles_total / 3);
-    const bonusVictorias = Math.floor(victorias / 3);
-
-    let nuevosStats = { ...statsActuales };
-
-    if (posicionBase === "DEL") {
-      nuevosStats.ritmo = clamp(statsActuales.ritmo + bonusPartidos + bonusVictorias, 60, 79);
-      nuevosStats.tiro = clamp(statsActuales.tiro + bonusGoles + bonusVictorias, 60, 80);
-      nuevosStats.regate = clamp(statsActuales.regate + bonusPartidos, 60, 78);
-    } else if (posicionBase === "MED") {
-      nuevosStats.pase = clamp(statsActuales.pase + bonusPartidos + bonusVictorias, 60, 79);
-      nuevosStats.regate = clamp(statsActuales.regate + bonusPartidos, 60, 78);
-      nuevosStats.ritmo = clamp(statsActuales.ritmo + Math.floor(partidos_jugados / 5), 60, 76);
-    } else if (posicionBase === "DEF") {
-      nuevosStats.defensa = clamp(statsActuales.defensa + bonusPartidos + bonusVictorias, 62, 81);
-      nuevosStats.fisico = clamp(statsActuales.fisico + bonusPartidos, 62, 79);
-      nuevosStats.pase = clamp(statsActuales.pase + Math.floor(partidos_jugados / 6), 58, 74);
-    } else if (posicionBase === "POR") {
-      nuevosStats.defensa = clamp(statsActuales.defensa + bonusPartidos + bonusVictorias, 62, 80);
-      nuevosStats.fisico = clamp(statsActuales.fisico + bonusPartidos, 62, 78);
-      nuevosStats.pase = clamp(statsActuales.pase + Math.floor(partidos_jugados / 6), 58, 75);
+    if (nuevosDesbloqueos.length > 0) {
+      await supabase
+        .from("logros_desbloqueados")
+        .insert(nuevosDesbloqueos.map((l) => ({ usuario_id: usuarioId, logro_id: l.id })));
     }
 
-    nuevosStats.ritmo = clamp(nuevosStats.ritmo, 50, 85);
-    nuevosStats.tiro = clamp(nuevosStats.tiro, 50, 85);
-    nuevosStats.pase = clamp(nuevosStats.pase, 50, 85);
-    nuevosStats.regate = clamp(nuevosStats.regate, 50, 85);
-    nuevosStats.defensa = clamp(nuevosStats.defensa, 50, 85);
-    nuevosStats.fisico = clamp(nuevosStats.fisico, 50, 85);
+    // La media se recalcula entera cada vez, así que sumamos el bono de
+    // TODOS los logros de tipo "media" que el jugador haya ganado hasta
+    // ahora (los de antes + los nuevos) para no perder bonos pasados
+    const bonoMediaTotal =
+      (yaDesbloqueados || [])
+        .filter((d) => d.logros?.stat_mejora === "media_general")
+        .reduce((acc, d) => acc + (d.logros?.valor_mejora || 0), 0) +
+      nuevosDesbloqueos
+        .filter((l) => l.stat_mejora === "media_general")
+        .reduce((acc, l) => acc + (l.valor_mejora || 0), 0);
 
-    const media_general = clamp(calcularMediaDesdeStats(nuevosStats), 64, 85);
+    const media_general = Math.min(
+      99,
+      65 + goles_total * 1 + asistencias_total * 0.5 + Math.floor(partidos_jugados / 3) + bonoMediaTotal
+    );
 
-    await supabase
-      .from("perfiles")
-      .update({
-        media_general,
-        partidos_jugados,
-        goles_total,
-        victorias,
-        derrotas,
-        empates,
-        win_rate,
-        ritmo: nuevosStats.ritmo,
-        tiro: nuevosStats.tiro,
-        pase: nuevosStats.pase,
-        regate: nuevosStats.regate,
-        defensa: nuevosStats.defensa,
-        fisico: nuevosStats.fisico,
-      })
-      .eq("id", usuarioId);
+    const updates = {
+      partidos_jugados,
+      goles_total,
+      asistencias_total,
+      max_goles_partido,
+      racha_victorias_max,
+      victorias,
+      derrotas,
+      empates,
+      win_rate,
+      media_general,
+    };
+
+    // Los demás atributos (ritmo, tiro, pase...) no tienen fórmula propia,
+    // así que solo se les suma el bono de los logros recién desbloqueados
+    const statsAdicionales = nuevosDesbloqueos.filter((l) => l.stat_mejora !== "media_general");
+
+    if (statsAdicionales.length > 0) {
+      const { data: perfilActual } = await supabase
+        .from("perfiles")
+        .select("ritmo, tiro, pase, regate, defensa, fisico")
+        .eq("id", usuarioId)
+        .single();
+
+      const valoresActuales = { ...perfilActual };
+
+      statsAdicionales.forEach((l) => {
+        valoresActuales[l.stat_mejora] = Math.min(99, (valoresActuales[l.stat_mejora] ?? 65) + l.valor_mejora);
+      });
+
+      Object.assign(updates, valoresActuales);
+    }
+
+    await supabase.from("perfiles").update(updates).eq("id", usuarioId);
   }
 
   async function guardarResultado(e) {

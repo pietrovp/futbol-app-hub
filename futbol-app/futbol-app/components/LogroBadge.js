@@ -1,7 +1,7 @@
-export default function LogroBadge({ label, desc, desbloqueado }) {
+export default function LogroBadge({ label, desc, bonus, desbloqueado }) {
   return (
     <div
-      className={`flex flex-col items-center text-center gap-2 rounded-2xl border p-4 transition-all ${
+      className={`flex flex-col items-center text-center gap-1.5 rounded-2xl border p-4 transition-all ${
         desbloqueado
           ? "bg-cancha-gris border-cancha-verde/30"
           : "bg-white border-gray-100 opacity-40 grayscale"
@@ -26,6 +26,15 @@ export default function LogroBadge({ label, desc, desbloqueado }) {
       </div>
       <p className="text-xs font-bold text-gray-700 leading-tight">{label}</p>
       <p className="text-[10px] text-gray-400 leading-tight">{desc}</p>
+      {bonus && (
+        <span
+          className={`text-[9px] font-bold rounded-full px-2 py-0.5 ${
+            desbloqueado ? "bg-cancha-verde/15 text-cancha-verdeoscuro" : "bg-gray-100 text-gray-400"
+          }`}
+        >
+          {bonus}
+        </span>
+      )}
     </div>
   );
 }
