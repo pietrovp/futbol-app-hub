@@ -68,17 +68,18 @@ const TIERS = [
 const SIZES = {
   mini: {
     width: "w-[150px]",
-    avatar: 56,
-    ovr: "text-4xl",
-    label: "text-xs",
-    flag: "text-base",
-    posBadge: "text-[9px]",
-    posBadgePad: "px-2.5 py-0.5",
-    posMarginTop: "mt-11",
+    avatar: 52,
+    ovr: "text-3xl",
+    label: "text-[10px]",
+    flag: "text-xs",
+    posBadge: "text-[8px]",
+    posBadgePad: "px-2 py-0.5",
+    posGap: "gap-1",
+    posMarginTop: "mt-10",
+    avatarMargin: "mt-3 mb-3",
     name: "text-sm",
-    attrValue: "text-xs",
-    attrLabel: "text-[10px]",
-    pad: "px-3 pt-4",
+    nameMargin: "mb-4",
+    pad: "px-3 pt-4 pb-5",
     barPad: "py-1.5",
     barText: "text-[11px]",
   },
@@ -90,10 +91,11 @@ const SIZES = {
     flag: "text-lg",
     posBadge: "text-[10px]",
     posBadgePad: "px-3 py-0.5",
+    posGap: "gap-1.5",
     posMarginTop: "mt-11",
+    avatarMargin: "my-3",
     name: "text-sm",
-    attrValue: "text-xs",
-    attrLabel: "text-[10px]",
+    nameMargin: "",
     pad: "px-3 pt-4",
     barPad: "py-1.5",
     barText: "text-[11px]",
@@ -106,10 +108,11 @@ const SIZES = {
     flag: "text-xl",
     posBadge: "text-xs",
     posBadgePad: "px-4 py-1",
+    posGap: "gap-1.5",
     posMarginTop: "mt-16",
+    avatarMargin: "my-3",
     name: "text-xl",
-    attrValue: "text-base",
-    attrLabel: "text-xs",
+    nameMargin: "",
     pad: "px-6 pt-8",
     barPad: "py-2.5",
     barText: "text-sm",
@@ -238,7 +241,7 @@ export default function PlayerCard({
         </div>
 
         <span
-          className={`${dims.posMarginTop} ${dims.posBadge} ${dims.posBadgePad} inline-flex items-center gap-1.5 font-bold tracking-wide rounded-full`}
+          className={`${dims.posMarginTop} ${dims.posBadge} ${dims.posBadgePad} inline-flex items-center ${dims.posGap} font-bold tracking-wide rounded-full whitespace-nowrap`}
           style={{ background: tier.barBg, color: tier.subText }}
         >
           <span>{POSICION_LABELS[posicionSegura]}</span>
@@ -255,12 +258,12 @@ export default function PlayerCard({
           ) : null}
         </span>
 
-        <div className="my-3">
+        <div className={dims.avatarMargin}>
           <Avatar src={avatar} alt={nombreSeguro} size={dims.avatar} />
         </div>
 
         <p
-          className={`text-center ${dims.name} font-extrabold leading-tight line-clamp-2 px-1`}
+          className={`text-center ${dims.name} ${dims.nameMargin} font-extrabold leading-tight line-clamp-2 px-1`}
           style={{ color: tier.textColor }}
         >
           {nombreSeguro}

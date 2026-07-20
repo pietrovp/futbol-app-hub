@@ -115,7 +115,7 @@ export default async function JugadorDetalle({ params }) {
           <PlayerCard
             size="lg"
             nombre={perfil.nombre || "Jugador"}
-            posicion={perfil.posicion || "MED"}
+            posicion={perfil.posicion_preferida || perfil.posicion || "MED"}
             media={st.media_general}
             stats={{
               ritmo: st.ritmo,
@@ -125,15 +125,15 @@ export default async function JugadorDetalle({ params }) {
               defensa: st.defensa,
               fisico: st.fisico,
             }}
-            nivel={st.nivel}
             avatar={perfil.avatar_url}
+            nacionalidad={perfil.nacionalidad || null}
           />
         </div>
 
         <div className="flex flex-col gap-4">
           <div className="bg-white rounded-2xl shadow-card p-5">
             <h2 className="font-bold text-gray-800 text-lg">{perfil.nombre || "Jugador"}</h2>
-            <p className="text-gray-500 text-sm mt-1">{perfil.posicion || "Sin posición"}</p>
+            <p className="text-gray-500 text-sm mt-1">{perfil.posicion_preferida || perfil.posicion || "Sin posición"}</p>
 
             <div className="grid grid-cols-3 gap-3 mt-4">
               {[

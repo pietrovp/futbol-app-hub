@@ -20,7 +20,7 @@ export default function Jugadores() {
 
       const { data, error } = await supabase
         .from("perfiles")
-        .select("id, nombre, posicion, posicionpreferida, mediageneral, avatar_url, nacionalidad");
+        .select("id, nombre, posicion, posicion_preferida, media_general, avatar_url, nacionalidad");
 
       if (error) {
         console.error("ERROR JUGADORES:", error);
@@ -39,8 +39,8 @@ export default function Jugadores() {
   const filtrados = jugadores
     .filter((j) => j.nombre?.toLowerCase().includes(busqueda.toLowerCase()))
     .sort((a, b) => {
-      const mediaA = a.mediageneral ?? 0;
-      const mediaB = b.mediageneral ?? 0;
+      const mediaA = a.media_general ?? 0;
+      const mediaB = b.media_general ?? 0;
       return ordenDesc ? mediaB - mediaA : mediaA - mediaB;
     });
 
@@ -105,8 +105,8 @@ export default function Jugadores() {
                 <PlayerCard
                   mini
                   nombre={j.nombre || "Jugador"}
-                  posicion={j.posicionpreferida || j.posicion || "MED"}
-                  media={j.mediageneral ?? 65}
+                  posicion={j.posicion_preferida || j.posicion || "MED"}
+                  media={j.media_general ?? 65}
                   avatar={j.avatar_url || null}
                   nacionalidad={j.nacionalidad || null}
                 />
