@@ -78,16 +78,22 @@ export default function Perfil() {
           return;
         }
 
-        const partidos_jugados = p.partidosjugados ?? 0;
-        const goles_total = p.golestotal ?? 0;
+        // Ajusta a tus nombres reales: guion bajo vs sin guion
+        const partidos_jugados =
+          p.partidos_jugados ?? p.partidosjugados ?? 0;
+        const goles_total =
+          p.goles_total ?? p.golestotal ?? 0;
         const victorias = p.victorias ?? 0;
         const derrotas = p.derrotas ?? 0;
 
         const promedio_goles =
           partidos_jugados > 0 ? (goles_total / partidos_jugados).toFixed(2) : "0.00";
 
-        const ratio_vd =
-          derrotas > 0 ? (victorias / derrotas).toFixed(2) : victorias > 0 ? "∞" : "0.00";
+        // Porcentaje de victorias sobre partidos jugados
+        const porcentaje_victorias =
+          partidos_jugados > 0
+            ? ((victorias / partidos_jugados) * 100).toFixed(0) + "%"
+            : "0%";
 
         setPerfil(p);
         setStats({
@@ -103,7 +109,7 @@ export default function Perfil() {
           victorias,
           derrotas,
           promedio_goles,
-          ratio_vd,
+          porcentaje_victorias,
         });
       } catch (error) {
         console.error("Error general perfil:", error);
@@ -258,7 +264,7 @@ export default function Perfil() {
               </div>
             </div>
 
-            {/* Subir / cambiar foto de perfil con mejor UI */}
+            {/* Subir / cambiar foto de perfil */}
             <div className="mt-4 flex flex-col gap-3">
               <p className="text-xs text-gray-500">
                 Foto de perfil
@@ -344,8 +350,10 @@ export default function Perfil() {
               </div>
 
               <div className="bg-cancha-gris rounded-xl p-3">
-                <p className="text-xs text-gray-500">Ratio victorias / derrotas</p>
-                <p className="font-bold text-gray-800">{stats?.ratio_vd || "0.00"}</p>
+                <p className="text-xs text-gray-500">Porcentaje victorias</p>
+                <p className="font-bold text-gray-800">
+                  {stats?.porcentaje_victorias || "0%"}
+                </p>
               </div>
 
               <div className="bg-cancha-gris rounded-xl p-3">
