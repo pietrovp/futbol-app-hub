@@ -445,34 +445,38 @@ export default function OrganizarPartido() {
       racha_victorias_max,
     };
 
-    // Revisa qué logros activos desbloquea el jugador con este resultado
+    // FIX: Obtener logros ya desbloqueados ANTES de insertar nuevos
     const { data: logrosActivos } = await supabase.from("logros").select("*").eq("activo", true);
-    const { data: yaDesbloqueados } = await supabase
+    const { data: yaDesbloqueadosAntes } = await supabase
       .from("logros_desbloqueados")
       .select("logro_id, logros(stat_mejora, valor_mejora)")
       .eq("usuario_id", usuarioId);
 
-    const idsDesbloqueados = new Set((yaDesbloqueados || []).map((d) => d.logro_id));
+    const idsDesbloqueados = new Set((yaDesbloqueadosAntes || []).map((d) => d.logro_id));
     const nuevosDesbloqueos = (logrosActivos || []).filter(
       (l) => !idsDesbloqueados.has(l.id) && cumpleRequisito(l, statsParaLogros)
     );
 
+    // FIX: upsert con ignoreDuplicates para evitar insertar el mismo logro dos veces
     if (nuevosDesbloqueos.length > 0) {
       await supabase
         .from("logros_desbloqueados")
-        .insert(nuevosDesbloqueos.map((l) => ({ usuario_id: usuarioId, logro_id: l.id })));
+        .upsert(
+          nuevosDesbloqueos.map((l) => ({ usuario_id: usuarioId, logro_id: l.id })),
+          { onConflict: "usuario_id,logro_id", ignoreDuplicates: true }
+        );
     }
 
-    // La media se recalcula entera cada vez, así que sumamos el bono de
-    // TODOS los logros de tipo "media" que el jugador haya ganado hasta
-    // ahora (los de antes + los nuevos) para no perder bonos pasados
-    const bonoMediaTotal =
-      (yaDesbloqueados || [])
-        .filter((d) => d.logros?.stat_mejora === "media_general")
-        .reduce((acc, d) => acc + (d.logros?.valor_mejora || 0), 0) +
-      nuevosDesbloqueos
-        .filter((l) => l.stat_mejora === "media_general")
-        .reduce((acc, l) => acc + (l.valor_mejora || 0), 0);
+    // FIX: Releer logros_desbloqueados DESPUÉS del upsert para tener la lista definitiva
+    // y calcular el bono con datos frescos, evitando el doble conteo
+    const { data: todosDesbloqueados } = await supabase
+      .from("logros_desbloqueados")
+      .select("logro_id, logros(stat_mejora, valor_mejora)")
+      .eq("usuario_id", usuarioId);
+
+    const bonoMediaTotal = (todosDesbloqueados || [])
+      .filter((d) => d.logros?.stat_mejora === "media_general")
+      .reduce((acc, d) => acc + (d.logros?.valor_mejora || 0), 0);
 
     const media_general = Math.min(
       99,
@@ -559,8 +563,11 @@ export default function OrganizarPartido() {
       return;
     }
 
-    for (const jugador of inscritos) {
-      await recalcularEstadisticasJugador(jugador.usuario_id);
+    // FIX: Deduplicar por usuario_id para no procesar el mismo jugador dos veces
+    // si hubiera inscripciones duplicadas en la lista
+    const idsUnicos = [...new Set(inscritos.map((j) => j.usuario_id))];
+    for (const usuarioId of idsUnicos) {
+      await recalcularEstadisticasJugador(usuarioId);
     }
 
     await cargarTodo();
