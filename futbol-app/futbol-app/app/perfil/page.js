@@ -130,7 +130,7 @@ export default function Perfil() {
           media: Number(valor(p.mediageneral, p.media_general, 64)),
           avatar: valor(p.avatarurl, p.avatar_url, null),
           creditos: Number(valor(p.creditos, 0)),
-          es_admin: Boolean(p.es_admin), // columna booleana en perfiles
+          es_admin: Boolean(p.es_admin),
         };
 
         setPerfil(perfilNormalizado);
@@ -517,36 +517,6 @@ export default function Perfil() {
                   (l) => l.id === logro.id
                 );
                 return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-bold text-gray-800">Mi perfil</h1>
-
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Carta */}
-        <div className="flex flex-col gap-3">
-          <h2 className="font-semibold text-gray-700">🃏 Mi carta</h2>
-          <PlayerCard
-            nombre={perfil.nombre}
-            posicion={perfil.posicion}
-            media={mediaConBonos}
-            stats={statsConBonos}
-            avatar={perfil.avatar}
-            nacionalidad={perfil.nacionalidad}
-            size="lg"
-          />
-        </div>
-
-        {/* Panel derecho */}
-        <div className="flex flex-col gap-4">
-          {/* ... aquí va tu panel de foto, créditos, stats rápidas y bloque admin ... */}
-
-          <div className="bg-white rounded-2xl shadow-card p-5">
-            <h2 className="font-semibold text-gray-700 mb-3">🏆 Logros</h2>
-            <div className="grid grid-cols-2 gap-2">
-              {LOGROS_DEF.map((logro) => {
-                const desbloqueado = logrosDesbloqueados.some(
-                  (l) => l.id === logro.id
-                );
-                return (
                   <div
                     key={logro.id}
                     className={`rounded-xl p-3 flex flex-col gap-1 transition-all ${
@@ -571,7 +541,5 @@ export default function Perfil() {
         </div>
       </div>
     </div>
-  );
-}
   );
 }
