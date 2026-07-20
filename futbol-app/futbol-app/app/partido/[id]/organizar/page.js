@@ -85,7 +85,6 @@ function JugadorCard({ jugador, modo, onCambiarEquipo, valorGol, onGolChange, dr
 
       <div className="w-10 h-10 rounded-full bg-cancha-verde/15 flex items-center justify-center text-xs font-black text-cancha-verdeoscuro shrink-0 overflow-hidden">
         {jugador.avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img src={jugador.avatarUrl} alt={jugador.nombre} className="w-full h-full object-cover" />
         ) : (
           iniciales(jugador.nombre)
@@ -464,7 +463,6 @@ export default function OrganizarPartido() {
         );
     }
 
-    // Releer todos los logros desbloqueados tras el upsert para calcular el bono real
     const { data: todosDesbloqueados } = await supabase
       .from("logros_desbloqueados")
       .select("logro_id, logros(stat_mejora, valor_mejora)")
@@ -474,9 +472,9 @@ export default function OrganizarPartido() {
       .filter((d) => d.logros?.stat_mejora === "media_general")
       .reduce((acc, d) => acc + (d.logros?.valor_mejora || 0), 0);
 
-    // FIX PRINCIPAL: la media base es siempre 65.
-    // Los goles, asistencias y partidos jugados NO suben la media.
-    // Solo los bonos de logros con stat_mejora === "media_general" la modifican.
+    // CORRECCIÓN CLAVE:
+    // La media general solo sube por logros específicos de media_general.
+    // Goles, asistencias y partidos jugados ya NO modifican la media.
     const media_general = Math.min(99, 65 + bonoMediaTotal);
 
     const updates = {
@@ -492,8 +490,6 @@ export default function OrganizarPartido() {
       media_general,
     };
 
-    // Para stats adicionales (ritmo, tiro, pase...) solo se aplica el bono
-    // de los logros RECIÉN desbloqueados en esta llamada, sumado al valor actual del perfil
     const statsAdicionales = nuevosDesbloqueos.filter((l) => l.stat_mejora !== "media_general");
 
     if (statsAdicionales.length > 0) {
